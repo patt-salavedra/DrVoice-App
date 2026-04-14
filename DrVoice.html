@@ -1,0 +1,1370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>DrugRecognizer</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0d14;--bg2:#111520;--bg3:#171c2e;--bg4:#1e2438;
+  --surface:#1a2035;--surface2:#212840;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --text:#e8eaf2;--text2:#8b92a8;--text3:#5a6178;
+  --accent:#4f9cf9;--accent2:#2d6fd4;
+  --green:#22c55e;--green-bg:rgba(34,197,94,0.12);
+  --yellow:#f59e0b;--yellow-bg:rgba(245,158,11,0.12);
+  --red:#ef4444;--red-bg:rgba(239,68,68,0.12);
+  --blue-bg:rgba(79,156,249,0.12);
+  --radius:14px;--radius-sm:8px;
+  --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+  --nav-h:64px;
+}
+.light{
+  --bg:#f0f2f8;--bg2:#e8eaf4;--bg3:#fff;--bg4:#f5f6fc;
+  --surface:#fff;--surface2:#f0f2fb;
+  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.14);
+  --text:#111827;--text2:#4b5563;--text3:#9ca3af;
+  --accent:#2563eb;--accent2:#1d4ed8;
+  --green-bg:rgba(34,197,94,0.1);--yellow-bg:rgba(245,158,11,0.1);
+  --red-bg:rgba(239,68,68,0.1);--blue-bg:rgba(37,99,235,0.08);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;background:var(--bg);font-family:var(--font);overflow:hidden}
+
+/* ── OUTER SHELL ── */
+#appShell{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--bg);transition:background .3s}
+
+/* ── BOTTOM NAV ── */
+#bottomNav{
+  position:fixed;bottom:0;left:0;right:0;
+  height:var(--nav-h);
+  background:var(--bg2);border-top:1px solid var(--border);
+  display:flex;align-items:center;padding:0 4px 6px;gap:2px;
+  z-index:1000;flex-shrink:0;
+}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 2px;border-radius:var(--radius-sm);cursor:pointer;transition:all .15s}
+.nav-item:active{background:var(--surface2)}
+.nav-item svg{width:21px;height:21px;fill:var(--text3);transition:fill .15s}
+.nav-item span{font-size:9px;color:var(--text3);font-weight:500;transition:color .15s;white-space:nowrap}
+.nav-item.active svg{fill:var(--accent)}
+.nav-item.active span{color:var(--accent)}
+
+/* ── FONT CONTROLS ── */
+#fontToggleBtn{
+  position:fixed;bottom:calc(var(--nav-h) + 10px);right:12px;z-index:1001;
+  width:38px;height:38px;border-radius:11px;border:1px solid var(--border2);
+  background:var(--surface);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.4);transition:all .15s;
+}
+#fontToggleBtn:active{transform:scale(.92)}
+#fontToggleBtn svg{width:18px;height:18px;fill:var(--text2)}
+#fontSizePanel{
+  position:fixed;bottom:calc(var(--nav-h) + 56px);right:12px;z-index:1001;
+  background:var(--surface);border:1px solid var(--border2);border-radius:13px;
+  padding:10px 13px;display:flex;flex-direction:column;gap:8px;
+  box-shadow:0 8px 32px rgba(0,0,0,.45);min-width:172px;
+  opacity:0;pointer-events:none;transform:translateY(6px) scale(.95);
+  transition:all .2s cubic-bezier(.4,0,.2,1);
+}
+#fontSizePanel.open{opacity:1;pointer-events:all;transform:translateY(0) scale(1)}
+#fontSizePanel label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);display:flex;justify-content:space-between;align-items:center}
+#fontSizePanel label span{font-family:var(--mono);color:var(--accent);font-size:11px;text-transform:none;letter-spacing:0}
+#fontSlider{width:100%;height:4px;border-radius:4px;background:var(--bg4);outline:none;border:none;-webkit-appearance:none;cursor:pointer}
+#fontSlider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px rgba(79,156,249,.25);cursor:pointer}
+.font-presets{display:flex;gap:5px}
+.fp-btn{flex:1;padding:4px 0;border-radius:7px;font-size:11px;font-weight:600;border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;transition:all .15s;font-family:var(--font)}
+.fp-btn.active{background:var(--blue-bg);color:var(--accent);border-color:var(--accent)}
+
+/* ── SCROLLABLE CONTENT AREA ── */
+#contentWrap{
+  position:fixed;
+  top:0;left:0;right:0;
+  bottom:var(--nav-h);
+  overflow:hidden;
+}
+#contentInner{
+  position:absolute;
+  top:0;left:0;right:0;bottom:0;
+  overflow-y:scroll;
+  overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  scroll-behavior:smooth;
+  scrollbar-width:none;
+}
+#contentInner::-webkit-scrollbar{display:none}
+#scaleWrap{
+  transform-origin:top left;
+  min-height:100%;
+}
+
+/* ── SPLASH ── */
+#splash{
+  position:fixed;inset:0;z-index:2000;
+  background:#060a12;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;overflow:hidden;
+}
+.splash-bg{position:absolute;inset:0;pointer-events:none}
+.bg-pill{position:absolute;border-radius:50px;opacity:0;animation:bgPillFloat 3s ease-in-out forwards}
+@keyframes bgPillFloat{0%{opacity:0;transform:translateY(20px) scale(.6)}30%{opacity:.18}70%{opacity:.12}100%{opacity:0;transform:translateY(-60px) scale(.9)}}
+.splash-logo-wrap{position:relative;display:flex;flex-direction:column;align-items:center;z-index:2}
+.splash-pill-svg{opacity:0;animation:pillDrop .55s cubic-bezier(.34,1.56,.64,1) .2s forwards}
+@keyframes pillDrop{from{opacity:0;transform:scale(.3) rotate(-30deg)}to{opacity:1;transform:scale(1) rotate(0deg)}}
+.splash-ring{position:absolute;width:110px;height:110px;border-radius:50%;border:2px solid rgba(79,156,249,.6);top:50%;left:50%;transform:translate(-50%,-50%);opacity:0;animation:ringExpand .7s ease-out .7s forwards}
+.splash-ring2{position:absolute;width:140px;height:140px;border-radius:50%;border:1.5px solid rgba(79,156,249,.25);top:50%;left:50%;transform:translate(-50%,-50%);opacity:0;animation:ringExpand .8s ease-out .9s forwards}
+@keyframes ringExpand{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}50%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(1.4)}}
+.mol-dot{position:absolute;width:7px;height:7px;border-radius:50%;background:#4f9cf9;opacity:0;animation:molPop .4s cubic-bezier(.34,1.56,.64,1) forwards}
+@keyframes molPop{from{opacity:0;transform:scale(0)}to{opacity:1;transform:scale(1)}}
+.splash-cross{position:absolute;color:rgba(79,156,249,.35);font-size:18px;font-weight:300;opacity:0;animation:crossFade 1s ease forwards}
+@keyframes crossFade{0%{opacity:0;transform:scale(.5) rotate(-90deg)}50%{opacity:1}100%{opacity:.6;transform:scale(1) rotate(0)}}
+.splash-title{margin-top:18px;font-size:22px;font-weight:700;color:#fff;letter-spacing:.02em;opacity:0;transform:translateY(12px);animation:titleUp .5s ease .75s forwards}
+.splash-title span{color:#4f9cf9}
+.splash-sub{font-size:11px;color:rgba(255,255,255,.35);letter-spacing:.18em;text-transform:uppercase;margin-top:5px;opacity:0;animation:titleUp .5s ease .9s forwards}
+@keyframes titleUp{to{opacity:1;transform:translateY(0)}}
+.splash-bar-wrap{position:absolute;bottom:50px;left:40px;right:40px}
+.splash-bar-track{height:2px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden}
+.splash-bar-fill{height:100%;width:0;background:linear-gradient(90deg,#4f9cf9,#22c55e);border-radius:2px;animation:barFill 2s cubic-bezier(.4,0,.2,1) .4s forwards}
+@keyframes barFill{to{width:100%}}
+.splash-bar-label{text-align:center;font-size:10px;color:rgba(255,255,255,.25);font-family:var(--mono);margin-top:8px;letter-spacing:.05em;opacity:0;animation:titleUp .4s ease .5s forwards}
+#splash.exit{animation:splashExit .5s cubic-bezier(.4,0,1,1) forwards}
+@keyframes splashExit{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.05);pointer-events:none}}
+
+/* ── PIN ── */
+#pinScreen{position:fixed;inset:0;z-index:1900;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center}
+#pinScreen.show{display:flex}
+.pin-logo{width:56px;height:56px;background:var(--blue-bg);border-radius:18px;display:flex;align-items:center;justify-content:center;margin-bottom:20px;border:1px solid var(--border)}
+.pin-logo svg{width:28px;height:28px;fill:var(--accent)}
+.pin-title{font-size:18px;font-weight:700;color:var(--text);margin-bottom:6px}
+.pin-sub{font-size:13px;color:var(--text3);margin-bottom:28px}
+.pin-dots{display:flex;gap:14px;margin-bottom:32px}
+.pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--border2);transition:all .15s}
+.pin-dot.filled{background:var(--accent);border-color:var(--accent)}
+.pin-dot.error{background:var(--red);border-color:var(--red)}
+.pin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:240px}
+.pin-key{height:60px;background:var(--surface);border:1px solid var(--border);border-radius:16px;font-size:22px;font-weight:500;color:var(--text);cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center}
+.pin-key:active{background:var(--surface2);transform:scale(.93)}
+.pin-key.del{font-size:16px;color:var(--text3)}
+.pin-key.empty{background:transparent;border:none;cursor:default}
+.pin-error-shake{animation:pinShake .4s ease}
+@keyframes pinShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
+
+/* ── ONBOARDING ── */
+#onboardOverlay{position:fixed;inset:0;z-index:1800;background:var(--bg);display:none;flex-direction:column}
+#onboardOverlay.show{display:flex}
+.ob-header{padding:20px 20px 0;display:flex;flex-direction:column;gap:6px;flex-shrink:0}
+.ob-step-dots{display:flex;gap:6px;margin-bottom:4px}
+.ob-dot{height:4px;border-radius:4px;background:var(--border2);transition:all .3s;flex:1}
+.ob-dot.active{background:var(--accent)}.ob-dot.done{background:var(--green)}
+.ob-step-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--text3)}
+.ob-title{font-size:22px;font-weight:700;color:var(--text);line-height:1.2}
+.ob-sub{font-size:13px;color:var(--text2);margin-top:2px}
+.ob-body{flex:1;overflow-y:auto;padding:20px;scrollbar-width:none}
+.ob-body::-webkit-scrollbar{display:none}
+.ob-footer{padding:16px 20px;display:flex;gap:10px;flex-shrink:0;border-top:1px solid var(--border)}
+.ob-btn{flex:1;padding:14px;border-radius:14px;font-size:15px;font-weight:700;border:none;cursor:pointer;font-family:var(--font);transition:all .15s}
+.ob-btn:active{transform:scale(.97)}
+.ob-btn-back{background:var(--surface2);color:var(--text2)}
+.ob-btn-next{background:var(--accent);color:#fff;box-shadow:0 4px 16px rgba(79,156,249,.35)}
+.ob-btn-finish{background:var(--green);color:#fff;box-shadow:0 4px 16px rgba(34,197,94,.35)}
+.ob-step{display:none}
+.ob-step.active{display:block}
+.ob-welcome-icon{width:88px;height:88px;background:var(--blue-bg);border-radius:28px;border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;margin:0 auto 20px}
+.ob-welcome-icon svg{width:44px;height:44px;fill:var(--accent)}
+.ob-field{margin-bottom:16px}
+.ob-field label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);display:block;margin-bottom:6px}
+.ob-field input,.ob-field select,.ob-field textarea{width:100%;background:var(--surface);border:1.5px solid var(--border2);border-radius:12px;padding:12px 14px;font-size:15px;color:var(--text);font-family:var(--font);outline:none;transition:border .15s;-webkit-appearance:none}
+.ob-field input:focus,.ob-field select:focus,.ob-field textarea:focus{border-color:var(--accent)}
+.ob-field textarea{resize:none;height:72px;line-height:1.5}
+.ob-grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ob-condition-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ob-cond-item{background:var(--surface);border:1.5px solid var(--border2);border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:9px;cursor:pointer;transition:all .15s;user-select:none}
+.ob-cond-item.checked{background:var(--blue-bg);border-color:var(--accent)}
+.ob-cond-check{width:20px;height:20px;border-radius:6px;border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.ob-cond-item.checked .ob-cond-check{background:var(--accent);border-color:var(--accent)}
+.ob-cond-check svg{width:12px;height:12px;fill:#fff;opacity:0;transition:opacity .15s}
+.ob-cond-item.checked .ob-cond-check svg{opacity:1}
+.ob-cond-label{font-size:13px;font-weight:500;color:var(--text);line-height:1.2}
+.ob-chip-wrap{display:flex;flex-wrap:wrap;gap:6px;min-height:32px;margin-bottom:8px}
+.ob-chip-allergy{background:var(--red-bg);color:var(--red);padding:5px 10px;border-radius:20px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:5px}
+.ob-chip-med{background:var(--blue-bg);color:var(--accent);padding:5px 10px;border-radius:20px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:5px}
+.ob-chip-btn{background:none;border:none;cursor:pointer;font-size:14px;line-height:1;padding:0;color:inherit;opacity:.7}
+.ob-add-row{display:flex;gap:8px}
+.ob-add-row input{flex:1}
+.ob-add-row button{background:var(--accent);color:#fff;border:none;border-radius:12px;padding:0 16px;font-size:20px;font-weight:600;cursor:pointer}
+.ob-skip{background:none;border:none;color:var(--text3);font-size:13px;cursor:pointer;font-family:var(--font);padding:4px 8px;text-decoration:underline}
+
+/* ── SCREENS ── */
+.screen{display:none}
+.screen.active{display:block}
+
+/* ── APP HEADER ── */
+.app-header{padding:14px 18px 11px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg);z-index:9;border-bottom:1px solid var(--border)}
+.header-title{font-size:19px;font-weight:600;color:var(--text)}
+.header-sub{font-size:11px;color:var(--text3);margin-top:1px}
+.icon-btn{width:36px;height:36px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s}
+.icon-btn:active{background:var(--bg4)}
+.icon-btn svg{width:17px;height:17px;fill:var(--text2)}
+
+/* ── CARDS ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:15px;margin:0 14px 11px}
+.card-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:12px}
+
+/* ── CONNECTION ── */
+.conn-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin:11px 14px;overflow:hidden}
+.conn-top{padding:14px;display:flex;align-items:center;gap:12px}
+.conn-icon{width:44px;height:44px;border-radius:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.conn-icon svg{width:22px;height:22px}
+.conn-info{flex:1}
+.conn-name{font-size:14px;font-weight:600;color:var(--text)}
+.conn-status{font-size:11px;margin-top:2px}
+.conn-badge{padding:5px 11px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:none;transition:all .15s}
+.badge-connected{background:var(--green-bg);color:var(--green)}
+.badge-disconnected{background:var(--red-bg);color:var(--red)}
+.badge-scanning{background:var(--blue-bg);color:var(--accent)}
+.conn-stats{display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid var(--border)}
+.conn-stat{padding:9px;text-align:center;border-right:1px solid var(--border)}
+.conn-stat:last-child{border-right:none}
+.conn-stat-val{font-size:13px;font-weight:600;color:var(--text);font-family:var(--mono)}
+.conn-stat-lbl{font-size:9px;color:var(--text3);margin-top:2px}
+
+/* ── DETECTION ── */
+.detect-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin:0 14px 11px;overflow:hidden}
+.detect-main{padding:18px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:11px}
+.detect-ring{width:96px;height:96px;border-radius:50%;border:3px solid transparent;display:flex;align-items:center;justify-content:center}
+.ring-inner{width:76px;height:76px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;font-family:var(--mono)}
+.detect-name{font-size:20px;font-weight:700;color:var(--text)}
+.detect-sub{font-size:12px;color:var(--text2)}
+.detect-footer{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--border)}
+.detect-foot-item{padding:11px 14px;border-right:1px solid var(--border)}
+.detect-foot-item:last-child{border-right:none}
+.dfi-label{font-size:10px;color:var(--text3)}
+.dfi-val{font-size:14px;font-weight:600;color:var(--text);margin-top:2px}
+
+/* ── CONFIDENCE BAR ── */
+.conf-bar-wrap{width:100%;margin:3px 0 7px}
+.conf-bar-track{height:5px;background:var(--bg4);border-radius:5px;overflow:hidden}
+.conf-bar-fill{height:100%;border-radius:5px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+
+/* ── QUICK ACTIONS ── */
+.quick-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:0 14px 11px}
+.qa-btn{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px 11px;display:flex;flex-direction:column;gap:7px;cursor:pointer;transition:all .15s;position:relative;overflow:hidden;text-align:left}
+.qa-btn:active{transform:scale(.97)}
+.qa-icon{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center}
+.qa-icon svg{width:17px;height:17px}
+.qa-label{font-size:12px;font-weight:600;color:var(--text)}
+.qa-sub{font-size:10px;color:var(--text2)}
+.qa-btn.ripple::after{content:'';position:absolute;top:50%;left:50%;width:200%;height:200%;background:rgba(79,156,249,.15);border-radius:50%;transform:translate(-50%,-50%) scale(0);animation:ripple .5s ease-out}
+@keyframes ripple{to{transform:translate(-50%,-50%) scale(1);opacity:0}}
+
+/* ── HISTORY ── */
+.hist-item{display:flex;align-items:center;gap:11px;padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s}
+.hist-item:last-child{border-bottom:none}
+.hist-item:active{background:var(--surface2)}
+.hist-info{flex:1}
+.hist-drug{font-size:13px;font-weight:600;color:var(--text)}
+.hist-time{font-size:10px;color:var(--text3);margin-top:2px;font-family:var(--mono)}
+.hist-conf{font-size:12px;font-weight:600;font-family:var(--mono)}
+.pulse-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;position:relative}
+.pulse-dot::after{content:'';position:absolute;inset:-3px;border-radius:50%;border:2px solid currentColor;opacity:.4;animation:pulseDot 1.5s infinite}
+@keyframes pulseDot{0%,100%{transform:scale(1);opacity:.4}50%{transform:scale(1.5);opacity:0}}
+
+/* ── REMINDERS ── */
+.reminder-item{display:flex;align-items:center;padding:11px 14px;gap:11px;border-bottom:1px solid var(--border)}
+.reminder-item:last-child{border-bottom:none}
+.rem-time{font-size:18px;font-weight:600;color:var(--text);font-family:var(--mono);min-width:82px}
+.rem-info{flex:1}
+.rem-label{font-size:13px;font-weight:500;color:var(--text)}
+.rem-repeat{font-size:10px;color:var(--text3);margin-top:2px}
+
+/* ── TOGGLE ── */
+.toggle{width:42px;height:25px;border-radius:13px;border:none;cursor:pointer;transition:background .2s;position:relative}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:19px;height:19px;background:white;border-radius:50%;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.toggle.on{background:var(--green)}.toggle.on::after{transform:translateX(17px)}
+.toggle.off{background:var(--text3)}
+
+/* ── SETTINGS ── */
+.settings-row{display:flex;align-items:center;padding:13px 14px;gap:11px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s}
+.settings-row:last-child{border-bottom:none}
+.settings-row:active{background:var(--surface2)}
+.sr-icon{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sr-icon svg{width:17px;height:17px}
+.sr-info{flex:1}
+.sr-label{font-size:13px;font-weight:500;color:var(--text)}
+.sr-sub{font-size:10px;color:var(--text3);margin-top:1px}
+.sr-arrow svg{width:15px;height:15px;fill:var(--text3)}
+
+/* ── LIVE BADGE ── */
+.live-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(34,197,94,.12);color:var(--green);padding:3px 8px 3px 6px;border-radius:20px;font-size:10px;font-weight:600}
+.live-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:liveBlink 1s infinite}
+@keyframes liveBlink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── TICKER ── */
+.ticker{background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:7px 0;overflow:hidden;white-space:nowrap;margin-bottom:11px}
+.ticker-inner{display:inline-block;animation:ticker 22s linear infinite;font-size:10px;color:var(--text3);font-family:var(--mono)}
+@keyframes ticker{from{transform:translateX(100vw)}to{transform:translateX(-100%)}}
+
+/* ── STATS ROW ── */
+.stats-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin:0 14px 11px}
+.stat-tile{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:11px;text-align:center}
+.stat-num{font-size:20px;font-weight:700;color:var(--text);font-family:var(--mono)}
+.stat-lbl{font-size:9px;color:var(--text3);margin-top:2px;font-weight:500;text-transform:uppercase;letter-spacing:.05em}
+
+/* ── BLE STREAM ── */
+.ble-stream{background:var(--bg3);border:1px solid var(--border);border-radius:9px;margin:0 14px 11px;overflow:hidden}
+.ble-stream-header{display:flex;align-items:center;justify-content:space-between;padding:9px 13px;border-bottom:1px solid var(--border)}
+.ble-stream-title{font-size:11px;font-weight:600;color:var(--text3);font-family:var(--mono)}
+.ble-entries{padding:7px;max-height:96px;overflow-y:auto;scrollbar-width:none}
+.ble-entries::-webkit-scrollbar{display:none}
+.ble-entry{font-size:10px;font-family:var(--mono);color:var(--text3);padding:2px 5px;border-radius:4px;line-height:1.8}
+.ble-entry .ble-key{color:var(--accent)}.ble-entry .ble-val{color:var(--green)}
+
+/* ── SCAN ANIMATION ── */
+.scan-anim{width:76px;height:76px;position:relative;display:flex;align-items:center;justify-content:center}
+.scan-pulse{position:absolute;width:100%;height:100%;border-radius:50%;background:rgba(79,156,249,.15);animation:scanPulse 2s infinite}
+.scan-pulse:nth-child(2){animation-delay:.5s}.scan-pulse:nth-child(3){animation-delay:1s}
+@keyframes scanPulse{0%{transform:scale(.5);opacity:1}100%{transform:scale(1.5);opacity:0}}
+.scan-core{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--accent);position:relative;z-index:1;background:var(--blue-bg)}
+.scan-core svg{width:23px;height:23px;fill:var(--accent)}
+.scan-anim.idle .scan-pulse{animation:none;opacity:0}
+.scan-anim.idle{width:60px;height:60px}
+.scan-anim.idle .scan-core{border-color:var(--text3);background:var(--surface2)}
+.scan-anim.idle .scan-core svg{fill:var(--text3)}
+
+/* ── PI SPEAK INDICATOR ── */
+.pi-speak-banner{
+  display:none;align-items:center;gap:10px;
+  background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);
+  border-radius:11px;padding:10px 13px;margin:0 14px 11px;
+}
+.pi-speak-banner.active{display:flex}
+.pi-speak-wave{display:flex;align-items:flex-end;gap:3px;height:18px}
+.pi-speak-wave span{width:4px;background:var(--green);border-radius:2px;animation:piwave 0.8s ease-in-out infinite}
+.pi-speak-wave span:nth-child(1){animation-delay:0s}
+.pi-speak-wave span:nth-child(2){animation-delay:.12s}
+.pi-speak-wave span:nth-child(3){animation-delay:.24s}
+.pi-speak-wave span:nth-child(4){animation-delay:.36s}
+@keyframes piwave{0%,100%{height:4px}50%{height:16px}}
+.pi-speak-text{font-size:12px;color:var(--green);font-weight:600;flex:1}
+
+/* ── MODAL BOTTOM SHEET ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1500;display:flex;flex-direction:column;justify-content:flex-end;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.show{opacity:1;pointer-events:all}
+.modal-sheet{background:var(--surface);border-radius:22px 22px 0 0;padding:18px;transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);border-top:1px solid var(--border2)}
+.modal-overlay.show .modal-sheet{transform:translateY(0)}
+.modal-handle{width:34px;height:4px;background:var(--border2);border-radius:4px;margin:0 auto 15px}
+.modal-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:15px}
+.modal-field{margin-bottom:13px}
+.modal-label{font-size:11px;color:var(--text3);margin-bottom:5px;font-weight:500}
+.modal-input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:10px 13px;font-size:14px;color:var(--text);font-family:var(--font);outline:none}
+.modal-input:focus{border-color:var(--accent)}
+select.modal-input{cursor:pointer}
+.modal-actions{display:flex;gap:9px;margin-top:5px}
+.modal-btn{flex:1;padding:12px;border-radius:11px;font-size:14px;font-weight:600;border:none;cursor:pointer;font-family:var(--font);transition:all .15s}
+.modal-btn:active{transform:scale(.97)}
+.btn-cancel{background:var(--surface2);color:var(--text2)}
+.btn-save{background:var(--accent);color:white}
+
+/* ── ALERT ── */
+.alert-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:1600;opacity:0;pointer-events:none;transition:opacity .2s;padding:22px}
+.alert-overlay.show{opacity:1;pointer-events:all}
+.alert-box{background:var(--surface);border-radius:18px;border:1px solid var(--border2);width:100%;overflow:hidden;transform:translateY(18px);transition:transform .3s}
+.alert-overlay.show .alert-box{transform:translateY(0)}
+.alert-header{background:var(--red-bg);padding:18px;display:flex;gap:13px;align-items:center;border-bottom:1px solid var(--border)}
+.alert-icon-wrap{width:44px;height:44px;background:rgba(239,68,68,.2);border-radius:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.alert-icon-wrap svg{width:24px;height:24px;fill:var(--red)}
+.alert-body{padding:15px}
+.alert-title{font-size:16px;font-weight:700;color:var(--text)}
+.alert-msg{font-size:12px;color:var(--text2);margin-top:4px}
+.alert-detail{background:var(--bg3);border-radius:9px;padding:11px;margin:11px 0;font-family:var(--mono);font-size:11px;color:var(--text2);border:1px solid var(--border)}
+.alert-actions{display:flex;gap:7px;padding:0 15px 15px}
+.alert-btn{flex:1;padding:11px;border-radius:11px;font-size:13px;font-weight:600;border:none;cursor:pointer;transition:all .15s}
+.btn-dismiss{background:var(--surface2);color:var(--text2)}
+.btn-alert{background:var(--red);color:white}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:calc(var(--nav-h) + 10px);left:12px;right:12px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:11px 15px;display:flex;align-items:center;gap:9px;font-size:12px;color:var(--text);z-index:1200;transform:translateY(20px);opacity:0;transition:all .3s;pointer-events:none}
+.toast.show{transform:translateY(0);opacity:1}
+.toast svg{width:17px;height:17px;flex-shrink:0}
+
+/* ── VOICE ── */
+.voice-wave{display:flex;align-items:flex-end;gap:3px;height:22px}
+.voice-wave span{width:4px;background:var(--accent);border-radius:2px;animation:vwave 1s ease-in-out infinite}
+.voice-wave span:nth-child(1){animation-delay:0s}.voice-wave span:nth-child(2){animation-delay:.15s}.voice-wave span:nth-child(3){animation-delay:.3s}.voice-wave span:nth-child(4){animation-delay:.45s}.voice-wave span:nth-child(5){animation-delay:.6s}
+@keyframes vwave{0%,100%{height:4px}50%{height:18px}}
+.voice-banner{background:var(--blue-bg);border:1px solid rgba(79,156,249,.25);border-radius:11px;padding:11px 13px;margin:0 14px 11px;display:none;align-items:center;gap:11px}
+.voice-banner.speaking{display:flex}
+.voice-banner-text{font-size:12px;color:var(--accent);font-weight:500;flex:1}
+
+/* ── INTERACTION ── */
+.interaction-badge{display:inline-flex;align-items:center;gap:5px;background:var(--yellow-bg);color:var(--yellow);padding:4px 9px;border-radius:7px;font-size:10px;font-weight:600;margin-top:5px}
+
+/* ── DOSAGE ── */
+.dose-pill{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--surface2);border:1.5px solid var(--border2);font-size:10px;font-weight:600;color:var(--text3);cursor:pointer;transition:all .2s}
+.dose-pill.taken{background:var(--green-bg);border-color:var(--green);color:var(--green)}
+
+/* ── PROFILE ── */
+.profile-avatar{width:68px;height:68px;border-radius:20px;background:var(--blue-bg);border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;overflow:hidden}
+.profile-avatar svg{width:34px;height:34px;fill:var(--accent)}
+.profile-avatar img{width:100%;height:100%;object-fit:cover;border-radius:18px}
+.profile-hero{display:flex;align-items:center;gap:14px;padding:14px 14px 11px}
+.profile-name{font-size:19px;font-weight:700;color:var(--text)}
+.profile-meta{font-size:11px;color:var(--text3);margin-top:3px}
+.profile-field{display:flex;flex-direction:column;gap:4px;margin-bottom:13px}
+.profile-field label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text3)}
+.profile-field input,.profile-field select,.profile-field textarea{background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--font);outline:none;width:100%;transition:border .15s}
+.profile-field input:focus,.profile-field select:focus,.profile-field textarea:focus{border-color:var(--accent)}
+.profile-field textarea{resize:none;height:60px;line-height:1.5}
+.allergy-chip{display:inline-flex;align-items:center;gap:5px;background:var(--red-bg);color:var(--red);padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;margin:3px}
+.allergy-chip button{background:none;border:none;color:var(--red);cursor:pointer;font-size:13px;line-height:1;padding:0 0 0 2px}
+.med-chip{display:inline-flex;align-items:center;gap:5px;background:var(--blue-bg);color:var(--accent);padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;margin:3px}
+.med-chip button{background:none;border:none;color:var(--accent);cursor:pointer;font-size:13px;line-height:1;padding:0 0 0 2px}
+.chip-input-row{display:flex;gap:7px;margin-top:5px}
+.chip-input-row input{flex:1}
+.chip-input-row button{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:0 12px;font-size:17px;cursor:pointer;font-weight:600}
+.profile-save-btn{width:100%;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:13px;font-size:14px;font-weight:700;font-family:var(--font);cursor:pointer;transition:all .15s;margin-top:4px}
+.profile-save-btn:active{transform:scale(.97)}
+
+.section-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);padding:14px 14px 7px}
+.scroll-bottom{height:24px}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:36px 18px;gap:11px;text-align:center}
+.empty-icon{width:60px;height:60px;background:var(--surface2);border-radius:18px;display:flex;align-items:center;justify-content:center}
+.empty-icon svg{width:28px;height:28px;fill:var(--text3)}
+.empty-title{font-size:15px;font-weight:600;color:var(--text2)}
+.empty-sub{font-size:12px;color:var(--text3)}
+.mode-btn svg{width:17px;height:17px;fill:var(--text2)}
+
+.th-header{display:flex;justify-content:space-between;margin-bottom:11px}
+.th-label{font-size:13px;color:var(--text2)}
+.th-val{font-size:13px;font-weight:600;color:var(--accent);font-family:var(--mono)}
+input[type=range]{width:100%;height:4px;border-radius:4px;background:var(--bg4);outline:none;border:none;-webkit-appearance:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:19px;height:19px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px rgba(79,156,249,.2);cursor:pointer}
+
+/* ── VOLUME INDICATOR ── */
+.vol-indicator{display:flex;align-items:center;gap:6px;margin-top:8px}
+.vol-bars{display:flex;align-items:flex-end;gap:2px;height:16px}
+.vol-bar{width:4px;border-radius:2px;background:var(--border2);transition:background .2s,height .2s}
+.vol-bar.active{background:var(--accent)}
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash">
+  <div class="splash-bg" id="splashBg"></div>
+  <div class="splash-logo-wrap">
+    <div style="position:relative;width:88px;height:88px;display:flex;align-items:center;justify-content:center">
+      <div class="splash-ring"></div><div class="splash-ring2"></div>
+      <div class="mol-dot" style="top:2px;left:50%;transform:translateX(-50%);background:#22c55e;animation-delay:.9s"></div>
+      <div class="mol-dot" style="bottom:2px;left:50%;transform:translateX(-50%);background:#f59e0b;animation-delay:1.05s"></div>
+      <div class="mol-dot" style="left:2px;top:50%;transform:translateY(-50%);background:#ef4444;animation-delay:1.1s"></div>
+      <div class="mol-dot" style="right:2px;top:50%;transform:translateY(-50%);animation-delay:1.15s"></div>
+      <svg class="splash-pill-svg" width="70" height="70" viewBox="0 0 72 72" fill="none">
+        <path d="M8 36C8 30.477 12.477 26 18 26H36V46H18C12.477 46 8 41.523 8 36Z" fill="#4f9cf9"/>
+        <path d="M36 26H54C59.523 26 64 30.477 64 36C64 41.523 59.523 46 54 46H36V26Z" fill="#e8eaf2"/>
+        <line x1="36" y1="26" x2="36" y2="46" stroke="#1a2035" stroke-width="1.5"/>
+        <ellipse cx="22" cy="31" rx="5" ry="3" fill="rgba(255,255,255,0.25)"/>
+      </svg>
+    </div>
+    <div class="splash-cross" style="top:-52px;left:-38px;animation-delay:.6s">+</div>
+    <div class="splash-cross" style="top:-38px;right:-48px;animation-delay:.75s;font-size:14px">+</div>
+    <div class="splash-title">Drug<span>Recognizer</span></div>
+    <div class="splash-sub">Medical Detection System</div>
+  </div>
+  <div class="splash-bar-wrap">
+    <div class="splash-bar-track"><div class="splash-bar-fill"></div></div>
+    <div class="splash-bar-label" id="splashLabel">Initializing BLE stack...</div>
+  </div>
+</div>
+
+<!-- PIN SCREEN -->
+<div id="pinScreen">
+  <div class="pin-logo"><svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg></div>
+  <div class="pin-title">Enter PIN</div>
+  <div class="pin-sub" id="pinSub">DrugRecognizer is locked</div>
+  <div class="pin-dots" id="pinDots"><div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div><div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div></div>
+  <div class="pin-grid">
+    <div class="pin-key" onclick="pinPress(1)">1</div><div class="pin-key" onclick="pinPress(2)">2</div><div class="pin-key" onclick="pinPress(3)">3</div>
+    <div class="pin-key" onclick="pinPress(4)">4</div><div class="pin-key" onclick="pinPress(5)">5</div><div class="pin-key" onclick="pinPress(6)">6</div>
+    <div class="pin-key" onclick="pinPress(7)">7</div><div class="pin-key" onclick="pinPress(8)">8</div><div class="pin-key" onclick="pinPress(9)">9</div>
+    <div class="pin-key empty"></div><div class="pin-key" onclick="pinPress(0)">0</div><div class="pin-key del" onclick="pinDel()">&#9003;</div>
+  </div>
+  <div style="margin-top:16px;font-size:12px;color:var(--text3)">Default PIN: <span style="color:var(--accent);font-family:var(--mono)">1234</span></div>
+</div>
+
+<!-- ONBOARDING -->
+<div id="onboardOverlay">
+  <div class="ob-header">
+    <div class="ob-step-dots" id="obDots"></div>
+    <div class="ob-step-label" id="obStepLabel">Step 1 of 6</div>
+    <div class="ob-title" id="obTitle">Welcome</div>
+    <div class="ob-sub" id="obSub">Let's set up your patient profile.</div>
+  </div>
+  <div class="ob-body">
+    <div class="ob-step active" id="ob-step-0">
+      <div style="text-align:center;padding:16px 0 24px">
+        <div class="ob-welcome-icon"><svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg></div>
+        <div style="font-size:22px;font-weight:700;color:var(--text);margin-bottom:10px">Patient Setup</div>
+        <div style="font-size:14px;color:var(--text2);line-height:1.6;max-width:280px;margin:0 auto">This quick 6-step interview helps DrugRecognizer personalize alerts and dosage guidance.</div>
+      </div>
+    </div>
+    <div class="ob-step" id="ob-step-1">
+      <div class="ob-field"><label>Full Name</label><input type="text" id="ob-name" placeholder="e.g. Juan Dela Cruz"></div>
+      <div class="ob-grid2"><div class="ob-field"><label>Age</label><input type="number" id="ob-age" placeholder="35" min="0" max="130"></div><div class="ob-field"><label>Sex</label><select id="ob-sex"><option value="">Select</option><option>Male</option><option>Female</option><option>Other</option></select></div></div>
+      <div class="ob-grid2"><div class="ob-field"><label>Blood Type</label><select id="ob-blood"><option value="">Unknown</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option></select></div><div class="ob-field"><label>Weight (kg)</label><input type="number" id="ob-weight" placeholder="65" min="0"></div></div>
+    </div>
+    <div class="ob-step" id="ob-step-2">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:14px">Select all conditions that apply:</div>
+      <div class="ob-condition-grid" id="obCondGrid"></div>
+      <div class="ob-field" style="margin-top:16px"><label>Other notes</label><textarea id="ob-conditions-other" placeholder="Any other conditions..."></textarea></div>
+    </div>
+    <div class="ob-step" id="ob-step-3">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:14px">Add known drug allergies:</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px" id="obAllergyQuick"></div>
+      <div class="ob-chip-wrap" id="obAllergyChips"></div>
+      <div class="ob-add-row"><input type="text" id="ob-allergy-input" placeholder="Type and press +" onkeydown="if(event.key==='Enter')obAddAllergy()"><button onclick="obAddAllergy()">+</button></div>
+    </div>
+    <div class="ob-step" id="ob-step-4">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:14px">Current medications:</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px" id="obMedQuick"></div>
+      <div class="ob-chip-wrap" id="obMedChips"></div>
+      <div class="ob-add-row"><input type="text" id="ob-med-input" placeholder="e.g. Metformin 500mg" onkeydown="if(event.key==='Enter')obAddMed()"><button onclick="obAddMed()">+</button></div>
+    </div>
+    <div class="ob-step" id="ob-step-5">
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px">Emergency Contact</div>
+      <div class="ob-field"><label>Contact Name</label><input type="text" id="ob-emerg-name" placeholder="e.g. Maria Dela Cruz"></div>
+      <div class="ob-grid2"><div class="ob-field"><label>Phone</label><input type="tel" id="ob-emerg-phone" placeholder="+63 912 345 6789"></div><div class="ob-field"><label>Relationship</label><input type="text" id="ob-emerg-rel" placeholder="e.g. Spouse"></div></div>
+    </div>
+    <div class="ob-step" id="ob-step-6">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:16px">Review before saving:</div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:4px 15px" id="obSummary"></div>
+    </div>
+  </div>
+  <div class="ob-footer">
+    <button class="ob-btn ob-btn-back" id="obBackBtn" onclick="obBack()" style="display:none">Back</button>
+    <button class="ob-skip" id="obSkipBtn" onclick="obSkip()">Skip setup</button>
+    <button class="ob-btn ob-btn-next" id="obNextBtn" onclick="obNext()">Get Started &#8594;</button>
+  </div>
+</div>
+
+<!-- FONT SIZE CONTROLS -->
+<button id="fontToggleBtn" onclick="toggleFontPanel()" title="Adjust font size">
+  <svg viewBox="0 0 24 24"><path d="M2.5 4v3h5v12h3V7h5V4h-13zm19 5h-9v3h3v7h3v-7h3V9z"/></svg>
+</button>
+<div id="fontSizePanel">
+  <label>Font Size <span id="fontSizeLabel">100%</span></label>
+  <input type="range" id="fontSlider" min="75" max="130" value="100" step="5" oninput="applyFontSize(this.value)">
+  <div class="font-presets">
+    <button class="fp-btn" onclick="setFontPreset(85,this)">S</button>
+    <button class="fp-btn active" onclick="setFontPreset(100,this)">M</button>
+    <button class="fp-btn" onclick="setFontPreset(115,this)">L</button>
+    <button class="fp-btn" onclick="setFontPreset(130,this)">XL</button>
+  </div>
+</div>
+
+<!-- MAIN APP SHELL -->
+<div id="appShell">
+  <div id="contentWrap">
+    <div id="contentInner">
+      <div id="scaleWrap">
+
+        <!-- DASHBOARD -->
+        <div class="screen active" id="screen-dashboard">
+          <div class="app-header">
+            <div><div class="header-title">DrugRecognizer</div><div class="header-sub">Medical Grade Detection</div></div>
+            <div style="display:flex;gap:7px">
+              <button class="mode-btn icon-btn" onclick="toggleMode()"><svg viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg></button>
+              <div class="icon-btn" onclick="showAlert()"><svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg></div>
+            </div>
+          </div>
+          <div class="ticker"><div class="ticker-inner" id="tickerText">BLE CONNECTED · SIGNAL: -52dBm · DrugRecognizer-Pi · FW: v2.1.4</div></div>
+          <div class="conn-card">
+            <div class="conn-top">
+              <div class="conn-icon" style="background:var(--blue-bg)"><svg viewBox="0 0 24 24" style="fill:var(--accent)"><path d="M17.71 7.71L12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29 4.3-4.29zM13 5.83l1.88 1.88L13 9.59V5.83zm1.88 10.46L13 18.17v-3.76l1.88 1.88z"/></svg></div>
+              <div class="conn-info"><div class="conn-name">DrugRecognizer-Pi</div><div class="conn-status" id="connStatusText" style="color:var(--green)">Connected · BLE Active</div></div>
+              <button class="conn-badge badge-connected" id="connBadge" onclick="toggleConn()">Connected</button>
+            </div>
+            <div class="conn-stats">
+              <div class="conn-stat"><div class="conn-stat-val" style="color:var(--green)" id="rssiVal">-52</div><div class="conn-stat-lbl">dBm RSSI</div></div>
+              <div class="conn-stat"><div class="conn-stat-val" id="latVal">0.3s</div><div class="conn-stat-lbl">Latency</div></div>
+              <div class="conn-stat"><div class="conn-stat-val" id="uptimeVal">0h 0m</div><div class="conn-stat-lbl">Uptime</div></div>
+            </div>
+          </div>
+          <div class="stats-row">
+            <div class="stat-tile"><div class="stat-num" style="color:var(--accent)" id="dashToday">0</div><div class="stat-lbl">Today</div></div>
+            <div class="stat-tile"><div class="stat-num" style="color:var(--green)" id="dashAccuracy">—</div><div class="stat-lbl">Accuracy</div></div>
+            <div class="stat-tile"><div class="stat-num" style="color:var(--yellow)" id="dashUnknown">0</div><div class="stat-lbl">Unknown</div></div>
+          </div>
+
+          <div class="pi-speak-banner" id="piSpeakBanner">
+            <div class="pi-speak-wave"><span></span><span></span><span></span><span></span></div>
+            <div class="pi-speak-text" id="piSpeakText">Pi speaking: —</div>
+            <div style="cursor:pointer;color:var(--green);font-size:15px;font-weight:700" onclick="hidePiSpeakBanner()">✕</div>
+          </div>
+
+          <div class="detect-card">
+            <div class="detect-main">
+              <div style="display:flex;justify-content:space-between;width:100%;align-items:center;margin-bottom:3px">
+                <div class="card-title" style="margin:0">Live Detection</div>
+                <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+              </div>
+              <div class="detect-ring" id="detectRing" style="border-color:var(--text3)">
+                <div class="ring-inner" id="detectRingInner" style="background:var(--surface2);color:var(--text3)">—</div>
+              </div>
+              <div class="detect-name" id="detectName">Waiting...</div>
+              <div class="detect-sub" id="detectSub">No detection yet — trigger a scan</div>
+              <div id="interactionWarn" style="display:none"></div>
+              <div class="conf-bar-wrap">
+                <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+                  <span style="font-size:10px;color:var(--text3)">Confidence Level</span>
+                  <span style="font-size:10px;font-weight:600;color:var(--text3);font-family:var(--mono)" id="confLabel">—</span>
+                </div>
+                <div class="conf-bar-track"><div class="conf-bar-fill" id="confBar" style="width:0%;background:var(--text3)"></div></div>
+              </div>
+            </div>
+            <div class="detect-footer">
+              <div class="detect-foot-item"><div class="dfi-label">Status</div><div class="dfi-val" id="detectStatus" style="color:var(--text3)">— Idle</div></div>
+              <div class="detect-foot-item"><div class="dfi-label">Scan Time</div><div class="dfi-val" style="font-family:var(--mono)" id="detectTime">—</div></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Today's Dosage Tracker</div>
+            <div id="dosageTracker" style="display:flex;flex-direction:column;gap:9px"></div>
+          </div>
+          <div class="ble-stream">
+            <div class="ble-stream-header"><span class="ble-stream-title">BLE DATA STREAM</span><div class="live-badge"><div class="live-dot"></div>RX</div></div>
+            <div class="ble-entries" id="bleEntries"><div class="ble-entry" style="font-style:italic;padding:7px">Waiting for BLE packets...</div></div>
+          </div>
+          <div class="section-label">Quick Actions</div>
+          <div class="quick-actions">
+            <button class="qa-btn" id="scanQaBtn" onclick="triggerScan(this)">
+              <div class="qa-icon" style="background:var(--blue-bg)"><svg viewBox="0 0 24 24" style="fill:var(--accent)"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zM19 13h-1.5v-1.5H19V13z"/></svg></div>
+              <div class="qa-label">Manual Scan</div><div class="qa-sub">Force Pi capture</div>
+            </button>
+            <button class="qa-btn" onclick="switchTab('reminders')">
+              <div class="qa-icon" style="background:rgba(245,158,11,.12)"><svg viewBox="0 0 24 24" style="fill:var(--yellow)"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg></div>
+              <div class="qa-label">Reminders</div><div class="qa-sub" id="nextReminderLabel">No alarms set</div>
+            </button>
+            <button class="qa-btn" onclick="switchTab('history')">
+              <div class="qa-icon" style="background:rgba(34,197,94,.1)"><svg viewBox="0 0 24 24" style="fill:var(--green)"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg></div>
+              <div class="qa-label">History</div><div class="qa-sub" id="histCountLabel">0 entries</div>
+            </button>
+            <button class="qa-btn" onclick="switchTab('diagnostics')">
+              <div class="qa-icon" style="background:rgba(239,68,68,.1)"><svg viewBox="0 0 24 24" style="fill:var(--red)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg></div>
+              <div class="qa-label">Diagnostics</div><div class="qa-sub">Pi health status</div>
+            </button>
+          </div>
+          <div class="scroll-bottom"></div>
+        </div>
+
+        <!-- HISTORY -->
+        <div class="screen" id="screen-history">
+          <div class="app-header">
+            <div><div class="header-title">Detection Log</div><div class="header-sub" id="histSubLabel">0 total entries</div></div>
+            <button class="conn-badge badge-disconnected" style="font-size:10px;padding:5px 10px" onclick="clearHistory()">Clear All</button>
+          </div>
+          <div style="padding:11px 14px 7px;display:flex;gap:7px;overflow-x:auto;scrollbar-width:none">
+            <button onclick="filterHist(this,'all')" class="filt-btn conn-badge badge-connected" style="white-space:nowrap;font-size:10px">All</button>
+            <button onclick="filterHist(this,'detected')" class="filt-btn" style="white-space:nowrap;font-size:10px;background:var(--surface2);color:var(--text3);border:none;cursor:pointer;padding:5px 11px;border-radius:20px;font-weight:600">Detected</button>
+            <button onclick="filterHist(this,'unknown')" class="filt-btn" style="white-space:nowrap;font-size:10px;background:var(--surface2);color:var(--text3);border:none;cursor:pointer;padding:5px 11px;border-radius:20px;font-weight:600">Unknown</button>
+            <button onclick="filterHist(this,'none')" class="filt-btn" style="white-space:nowrap;font-size:10px;background:var(--surface2);color:var(--text3);border:none;cursor:pointer;padding:5px 11px;border-radius:20px;font-weight:600">No Drug</button>
+          </div>
+          <div class="card" id="historyList" style="padding:0">
+            <div class="empty-state"><div class="empty-icon"><svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg></div><div class="empty-title">No history yet</div><div class="empty-sub">Run a scan to begin logging</div></div>
+          </div>
+          <div id="histSummary" style="display:none;margin:0 14px;padding:11px;background:var(--surface2);border-radius:9px;border:1px solid var(--border)">
+            <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">DETECTION SUMMARY</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px">
+              <div style="font-size:11px;color:var(--text2)">Identified: <span id="sumId" style="color:var(--green);font-weight:600">0</span></div>
+              <div style="font-size:11px;color:var(--text2)">Unknown: <span id="sumUnk" style="color:var(--red);font-weight:600">0</span></div>
+              <div style="font-size:11px;color:var(--text2)">No Drug: <span id="sumNone" style="color:var(--text3);font-weight:600">0</span></div>
+              <div style="font-size:11px;color:var(--text2)">Avg Conf: <span id="sumConf" style="color:var(--accent);font-weight:600">—</span></div>
+            </div>
+          </div>
+          <div class="scroll-bottom"></div>
+        </div>
+
+        <!-- REMINDERS -->
+        <div class="screen" id="screen-reminders">
+          <div class="app-header">
+            <div><div class="header-title">Reminders</div><div class="header-sub">Medication schedule</div></div>
+            <div class="icon-btn" onclick="openNewReminder()"><svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></div>
+          </div>
+          <div class="section-label">Active Alarms</div>
+          <div class="card" id="reminderList" style="padding:0"></div>
+          <div class="section-label">Pi Speaker Integration</div>
+          <div class="card">
+            <div style="display:flex;align-items:center;gap:11px;margin-bottom:11px">
+              <div style="width:38px;height:38px;background:var(--blue-bg);border-radius:11px;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" style="width:19px;height:19px;fill:var(--accent)"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg></div>
+              <div><div style="font-size:13px;font-weight:600;color:var(--text)">PAM8403 Speaker</div><div style="font-size:10px;color:var(--green)">Connected via Raspberry Pi</div></div>
+              <button class="toggle on" id="speakerToggle" style="margin-left:auto" onclick="toggleSetting(this,'piSpeaker')"></button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+              <button class="qa-btn" style="margin:0;padding:9px;gap:5px;align-items:center" onclick="playTestSound('beep')">
+                <svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:var(--accent)"><path d="M8 5v14l11-7z"/></svg>
+                <span style="font-size:11px;color:var(--text)">Test Sound</span>
+              </button>
+              <button class="qa-btn" style="margin:0;padding:9px;gap:5px;align-items:center" onclick="playTestSound('alert')">
+                <svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:var(--yellow)"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5S10 3.17 10 4v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+                <span style="font-size:11px;color:var(--text)">Test Alert</span>
+              </button>
+            </div>
+          </div>
+          <div class="scroll-bottom"></div>
+        </div>
+
+        <!-- SCAN -->
+        <div class="screen" id="screen-scan">
+          <div class="app-header">
+            <div><div class="header-title">Manual Scan</div><div class="header-sub">Force detection on Raspberry Pi</div></div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;padding:28px 14px 20px;gap:18px">
+            <div class="scan-anim idle" id="scanAnimEl">
+              <div class="scan-pulse"></div><div class="scan-pulse"></div><div class="scan-pulse"></div>
+              <div class="scan-core"><svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zM19 13h-1.5v-1.5H19V13z"/></svg></div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-size:17px;font-weight:700;color:var(--text)" id="scanStatus">Ready to Scan</div>
+              <div style="font-size:12px;color:var(--text2);margin-top:4px" id="scanSub">Place drug in detection area and press Trigger Scan</div>
+            </div>
+            <button style="background:var(--accent);color:white;border:none;border-radius:15px;padding:14px 44px;font-size:15px;font-weight:700;cursor:pointer;font-family:var(--font);transition:all .15s;box-shadow:0 4px 16px rgba(79,156,249,.35)" onclick="runManualScan()" id="scanBtn">Trigger Scan</button>
+            <div id="scanResult" style="width:100%;display:none">
+              <div class="detect-card" style="margin:0">
+                <div class="detect-main" style="padding:14px">
+                  <div class="detect-ring" id="scanResRing" style="border-color:var(--text3)">
+                    <div class="ring-inner" style="background:var(--surface2);color:var(--text3);font-size:20px" id="scanResConf">—</div>
+                  </div>
+                  <div class="detect-name" id="scanResDrug">—</div>
+                  <div class="detect-sub" id="scanResSub">—</div>
+                </div>
+                <div class="detect-footer">
+                  <div class="detect-foot-item"><div class="dfi-label">BLE Packet (RX)</div><div class="dfi-val" id="scanResJson" style="font-family:var(--mono);font-size:10px;word-break:break-all">—</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="section-label">BLE Command Protocol</div>
+          <div class="card" style="padding:0">
+            <div style="padding:11px 13px;border-bottom:1px solid var(--border)"><div style="font-size:10px;color:var(--text3);font-family:var(--mono)">TX &#8594; Pi</div><div style="font-size:11px;color:var(--accent);font-family:var(--mono);margin-top:3px">{"cmd":"scan","mode":"force","timestamp":0}</div></div>
+            <div style="padding:11px 13px"><div style="font-size:10px;color:var(--text3);font-family:var(--mono)">RX &#8592; Pi (CRC validated)</div><div style="font-size:11px;color:var(--green);font-family:var(--mono);margin-top:3px">{"drug":"...","conf":0.87,"status":1,"ts":0,"crc":"ok"}</div></div>
+          </div>
+          <div class="scroll-bottom"></div>
+        </div>
+
+        <!-- DIAGNOSTICS -->
+        <div class="screen" id="screen-diagnostics">
+          <div class="app-header">
+            <div><div class="header-title">Pi Diagnostics</div><div class="header-sub">Hardware health monitor</div></div>
+            <div class="icon-btn" onclick="refreshDiag()"><svg viewBox="0 0 24 24"><path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/></svg></div>
+          </div>
+          <div class="section-label">Device Status</div>
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)"><span style="font-size:11px;color:var(--text2)">BLE Connection</span><span style="font-size:11px;font-family:var(--mono);color:var(--green)" id="diagBle">Active</span></div>
+            <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)"><span style="font-size:11px;color:var(--text2)">Firmware</span><span style="font-size:11px;font-family:var(--mono);color:var(--green)" id="diagFw">v2.1.4 &#10003;</span></div>
+            <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)"><span style="font-size:11px;color:var(--text2)">Camera</span><span style="font-size:11px;font-family:var(--mono);color:var(--green)" id="diagCam">Online</span></div>
+            <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)"><span style="font-size:11px;color:var(--text2)">ML Model</span><span style="font-size:11px;font-family:var(--mono);color:var(--green)" id="diagMl">Loaded (94.3%)</span></div>
+            <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)"><span style="font-size:11px;color:var(--text2)">CPU Temp</span><span style="font-size:11px;font-family:var(--mono);color:var(--green)" id="diagTemp">42&#176;C</span></div>
+            <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)"><span style="font-size:11px;color:var(--text2)">Speaker (PAM8403)</span><span style="font-size:11px;font-family:var(--mono);color:var(--green)" id="diagSpk">Ready</span></div>
+            <div style="display:flex;justify-content:space-between;padding:7px 0"><span style="font-size:11px;color:var(--text2)">BLE Encryption</span><span style="font-size:11px;font-family:var(--mono);color:var(--green)" id="diagEnc">AES-128 &#10003;</span></div>
+          </div>
+          <div class="section-label">Offline Queue</div>
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div><div style="font-size:13px;font-weight:500;color:var(--text)">Buffered Packets</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Pending sync when BLE reconnects</div></div>
+              <div style="font-size:20px;font-weight:700;color:var(--accent);font-family:var(--mono)" id="queueCount">0</div>
+            </div>
+          </div>
+          <div class="scroll-bottom"></div>
+        </div>
+
+        <!-- SETTINGS -->
+        <div class="screen" id="screen-settings">
+          <div class="app-header">
+            <div><div class="header-title">Settings</div><div class="header-sub">Configure your device</div></div>
+          </div>
+          <div class="section-label">Security</div>
+          <div class="card" style="padding:0">
+            <div class="settings-row" onclick="openPinSetup()">
+              <div class="sr-icon" style="background:rgba(239,68,68,.1)"><svg viewBox="0 0 24 24" style="fill:var(--red)"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg></div>
+              <div class="sr-info"><div class="sr-label">PIN Lock</div><div class="sr-sub" id="pinLockSub">Disabled — tap to enable</div></div>
+              <div class="sr-arrow"><svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></div>
+            </div>
+          </div>
+          <div class="section-label">Notifications</div>
+          <div class="card" style="padding:0">
+            <div class="settings-row">
+              <div class="sr-icon" style="background:rgba(239,68,68,.1)"><svg viewBox="0 0 24 24" style="fill:var(--red)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg></div>
+              <div class="sr-info"><div class="sr-label">Unknown Drug Alert</div><div class="sr-sub" id="alertTypeSub">Alert type: Sound + Vibrate</div></div>
+              <button class="toggle on" id="unknownAlertToggle" onclick="toggleSetting(this,'unknownAlert')"></button>
+            </div>
+            <div class="settings-row" onclick="cycleAlertType()">
+              <div class="sr-icon" style="background:rgba(79,156,249,.1)"><svg viewBox="0 0 24 24" style="fill:var(--accent)"><path d="M7.76 16.24C6.67 15.16 6 13.66 6 12s.67-3.16 1.76-4.24L6.34 6.34C4.9 7.79 4 9.79 4 12s.9 4.21 2.34 5.66l1.42-1.42zm8.48 1.42C17.1 16.21 18 14.21 18 12s-.9-4.21-2.34-5.66l-1.42 1.42C15.33 8.84 16 10.34 16 12s-.67 3.16-1.76 4.24l1.42 1.42zM12 4C7.58 4 4 7.58 4 12s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/></svg></div>
+              <div class="sr-info"><div class="sr-label">Alert Type</div><div class="sr-sub" id="alertTypeLabel">Sound + Vibrate</div></div>
+              <div class="sr-arrow"><svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></div>
+            </div>
+          </div>
+          <div class="section-label">Detection</div>
+          <div class="card">
+            <div class="th-header"><span class="th-label">Confidence Threshold</span><span class="th-val" id="threshVal">70%</span></div>
+            <input type="range" id="threshSlider" min="40" max="95" value="70" step="5" oninput="updateConfThreshold(this.value)">
+            <div style="display:flex;justify-content:space-between;margin-top:5px"><span style="font-size:9px;color:var(--text3)">40% Lenient</span><span style="font-size:9px;color:var(--text3)">95% Strict</span></div>
+            <div style="height:1px;background:var(--border);margin:13px 0"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div><div style="font-size:13px;font-weight:500;color:var(--text)">Duplicate Filter</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Suppress repeated identical reads (passive only)</div></div>
+              <button class="toggle on" id="dupFilterToggle" onclick="toggleSetting(this,'dupFilter')"></button>
+            </div>
+          </div>
+          <div class="section-label">Voice Announcement</div>
+          <div class="card" style="padding:0">
+            <div class="settings-row">
+              <div class="sr-icon" style="background:rgba(79,156,249,.1)"><svg viewBox="0 0 24 24" style="fill:var(--accent)"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg></div>
+              <div class="sr-info">
+                <div class="sr-label">Pi Speaker (Primary)</div>
+                <div class="sr-sub">espeak via Raspberry Pi — speaks after every scan</div>
+              </div>
+              <button class="toggle on" id="piSpeakToggle" onclick="toggleSetting(this,'piSpeakEnabled')"></button>
+            </div>
+            <div class="settings-row">
+              <div class="sr-icon" style="background:rgba(79,156,249,.08)"><svg viewBox="0 0 24 24" style="fill:var(--text2)"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg></div>
+              <div class="sr-info">
+                <div class="sr-label">Browser Voice (Fallback)</div>
+                <div class="sr-sub">Speaks in browser if Pi is not connected</div>
+              </div>
+              <button class="toggle on" id="voiceToggle" onclick="toggleVoiceSetting(this)"></button>
+            </div>
+            <div class="settings-row" style="border-bottom:none">
+              <div class="sr-icon" style="background:rgba(79,156,249,.08)"><svg viewBox="0 0 24 24" style="fill:var(--text2)"><path d="M18.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM5 9v6h4l5 5V4L9 9H5z"/></svg></div>
+              <div class="sr-info">
+                <div class="sr-label">Voice Speed</div>
+                <div style="display:flex;align-items:center;gap:9px;margin-top:5px">
+                  <input type="range" id="voiceRateSlider" min="0.5" max="2" step="0.1" value="1" style="flex:1" oninput="updateVoiceRate(this.value)">
+                  <span id="voiceRateLabel" style="font-size:11px;font-weight:600;color:var(--accent);font-family:var(--mono);min-width:30px">1.0&#215;</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-label">Pi Speaker Volume</div>
+          <div class="card">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div style="display:flex;align-items:center;gap:9px">
+                <div style="width:34px;height:34px;background:var(--blue-bg);border-radius:9px;display:flex;align-items:center;justify-content:center">
+                  <svg viewBox="0 0 24 24" style="width:17px;height:17px;fill:var(--accent)"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+                </div>
+                <div>
+                  <div style="font-size:13px;font-weight:600;color:var(--text)">Pi Speaker Volume</div>
+                  <div style="font-size:10px;color:var(--text3);margin-top:2px">Controls PAM8403 amplifier output</div>
+                </div>
+              </div>
+              <span id="piVolLabel" style="font-size:18px;font-weight:700;color:var(--accent);font-family:var(--mono)">80%</span>
+            </div>
+            <input type="range" id="piVolSlider" min="0" max="100" value="80" step="5" oninput="updatePiVolume(this.value)">
+            <div style="display:flex;justify-content:space-between;margin-top:5px"><span style="font-size:9px;color:var(--text3)">Mute</span><span style="font-size:9px;color:var(--text3)">Max</span></div>
+            <div class="vol-indicator" id="volIndicator">
+              <div class="vol-bars" id="volBars">
+                <div class="vol-bar" style="height:4px" id="vb0"></div>
+                <div class="vol-bar" style="height:6px" id="vb1"></div>
+                <div class="vol-bar" style="height:8px" id="vb2"></div>
+                <div class="vol-bar" style="height:10px" id="vb3"></div>
+                <div class="vol-bar" style="height:12px" id="vb4"></div>
+                <div class="vol-bar" style="height:14px" id="vb5"></div>
+                <div class="vol-bar" style="height:16px" id="vb6"></div>
+              </div>
+              <span style="font-size:10px;color:var(--text3)" id="volLevelText">Medium</span>
+            </div>
+            <div style="margin-top:13px;padding-top:11px;border-top:1px solid var(--border)">
+              <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:10px">Test Audio</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <button id="testSoundBtn" onclick="playTestSound('beep')" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 8px;background:var(--blue-bg);border:1px solid rgba(79,156,249,.3);border-radius:12px;cursor:pointer;transition:all .15s;font-family:var(--font)">
+                  <svg viewBox="0 0 24 24" style="width:22px;height:22px;fill:var(--accent)"><path d="M8 5v14l11-7z"/></svg>
+                  <span style="font-size:11px;font-weight:600;color:var(--accent)">Test Sound</span>
+                  <span style="font-size:9px;color:var(--text3)">Pleasant chime</span>
+                </button>
+                <button id="testAlertBtn" onclick="playTestSound('alert')" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 8px;background:var(--yellow-bg);border:1px solid rgba(245,158,11,.3);border-radius:12px;cursor:pointer;transition:all .15s;font-family:var(--font)">
+                  <svg viewBox="0 0 24 24" style="width:22px;height:22px;fill:var(--yellow)"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5S10 3.17 10 4v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+                  <span style="font-size:11px;font-weight:600;color:var(--yellow)">Test Alert</span>
+                  <span style="font-size:9px;color:var(--text3)">Urgent alarm</span>
+                </button>
+              </div>
+              <div style="margin-top:10px;padding:9px 11px;background:var(--surface2);border-radius:9px;border:1px solid var(--border)">
+                <div style="font-size:10px;color:var(--text3);margin-bottom:4px;font-family:var(--mono)">AUDIO STATUS</div>
+                <div style="font-size:11px;color:var(--text2)" id="audioStatusMsg">Tap a button above to test audio output</div>
+              </div>
+            </div>
+            <div style="margin-top:13px;padding-top:11px;border-top:1px solid var(--border)">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <div><div style="font-size:13px;font-weight:500;color:var(--text)">Test Voice</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Hear current voice speed setting</div></div>
+                <button onclick="testVoiceSpeed()" style="background:var(--blue-bg);color:var(--accent);border:1px solid rgba(79,156,249,.3);border-radius:9px;padding:6px 13px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">&#9654; Test</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-label">App</div>
+          <div class="card" style="padding:0">
+            <div class="settings-row" onclick="bleConnect()">
+              <div class="sr-icon" style="background:var(--blue-bg)"><svg viewBox="0 0 24 24" style="fill:var(--accent)"><path d="M17.71 7.71L12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29 4.3-4.29z"/></svg></div>
+              <div class="sr-info"><div class="sr-label">Pair / Connect Device</div><div class="sr-sub">Scan for DrugRecognizer-Pi via BLE</div></div>
+              <div class="sr-arrow"><svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></div>
+            </div>
+            <div class="settings-row" onclick="toggleMode()">
+              <div class="sr-icon" style="background:var(--surface2)"><svg viewBox="0 0 24 24" style="fill:var(--text2)"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg></div>
+              <div class="sr-info"><div class="sr-label">Theme</div><div class="sr-sub" id="themeLabel">Dark Mode active</div></div>
+              <div class="sr-arrow"><svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></div>
+            </div>
+            <div class="settings-row">
+              <div class="sr-icon" style="background:var(--surface2)"><svg viewBox="0 0 24 24" style="fill:var(--text2)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg></div>
+              <div class="sr-info"><div class="sr-label">App Version</div><div class="sr-sub">v1.5.1 · Build 211 · Offline ready</div></div>
+            </div>
+          </div>
+          <div class="scroll-bottom"></div>
+        </div>
+
+        <!-- PATIENT PROFILE -->
+        <div class="screen" id="screen-profile">
+          <div class="app-header">
+            <div><div class="header-title">Patient Profile</div><div class="header-sub">Medical information &amp; identity</div></div>
+            <div class="icon-btn" onclick="saveProfile()"><svg viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg></div>
+          </div>
+          <div class="voice-banner" id="voiceBanner">
+            <div class="voice-wave"><span></span><span></span><span></span><span></span><span></span></div>
+            <div class="voice-banner-text" id="voiceBannerText">Speaking...</div>
+            <div style="cursor:pointer;color:var(--accent);font-size:17px" onclick="stopVoice()">&#10005;</div>
+          </div>
+          <div class="card" style="padding:0;overflow:visible">
+            <div class="profile-hero">
+              <div class="profile-avatar" onclick="document.getElementById('avatarInput').click()">
+                <svg viewBox="0 0 24 24" id="avatarIcon"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                <img id="avatarImg" src="" style="display:none">
+                <input type="file" id="avatarInput" accept="image/*" style="display:none" onchange="loadAvatar(this)">
+              </div>
+              <div style="flex:1">
+                <div class="profile-name" id="profileDisplayName">Patient Name</div>
+                <div class="profile-meta" id="profileDisplayMeta">Age — · Blood Type —</div>
+                <div style="margin-top:5px" id="profileDisplayAllergies"></div>
+              </div>
+            </div>
+          </div>
+          <div class="section-label">Basic Information</div>
+          <div class="card">
+            <div class="profile-field"><label>Full Name</label><input type="text" id="pName" placeholder="e.g. Juan Dela Cruz"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px">
+              <div class="profile-field"><label>Age</label><input type="number" id="pAge" placeholder="e.g. 35" min="0" max="130"></div>
+              <div class="profile-field"><label>Sex</label><select id="pSex"><option value="">Select</option><option value="Male">Male</option><option value="Female">Female</option><option value="Other">Other</option></select></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px">
+              <div class="profile-field"><label>Blood Type</label><select id="pBlood"><option value="">Unknown</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option></select></div>
+              <div class="profile-field"><label>Weight (kg)</label><input type="number" id="pWeight" placeholder="e.g. 65" min="0"></div>
+            </div>
+            <div class="profile-field"><label>Medical Conditions</label><textarea id="pConditions" placeholder="e.g. Hypertension, Type 2 Diabetes..."></textarea></div>
+          </div>
+          <div class="section-label">Known Allergies</div>
+          <div class="card">
+            <div id="allergyChips" style="min-height:26px;flex-wrap:wrap;display:flex"></div>
+            <div class="chip-input-row"><input type="text" id="allergyInput" placeholder="Add allergy (e.g. Penicillin)" onkeydown="if(event.key==='Enter')addAllergy()"><button onclick="addAllergy()">+</button></div>
+          </div>
+          <div class="section-label">Current Medications</div>
+          <div class="card">
+            <div id="medChips" style="min-height:26px;flex-wrap:wrap;display:flex"></div>
+            <div class="chip-input-row"><input type="text" id="medInput" placeholder="Add medication (e.g. Metformin 500mg)" onkeydown="if(event.key==='Enter')addMed()"><button onclick="addMed()">+</button></div>
+          </div>
+          <div class="section-label">Emergency Contact</div>
+          <div class="card">
+            <div class="profile-field"><label>Contact Name</label><input type="text" id="pEmergName" placeholder="e.g. Maria Dela Cruz"></div>
+            <div class="profile-field"><label>Phone Number</label><input type="tel" id="pEmergPhone" placeholder="e.g. +63 912 345 6789"></div>
+            <div class="profile-field"><label>Relationship</label><input type="text" id="pEmergRel" placeholder="e.g. Spouse, Parent"></div>
+          </div>
+          <div style="padding:0 14px 14px"><button class="profile-save-btn" onclick="saveProfile()">Save Profile</button></div>
+          <div class="scroll-bottom"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div id="bottomNav">
+    <div class="nav-item active" id="nav-dashboard" onclick="switchTab('dashboard')">
+      <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+      <span>Dashboard</span>
+    </div>
+    <div class="nav-item" id="nav-history" onclick="switchTab('history')">
+      <svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+      <span>History</span>
+    </div>
+    <div class="nav-item" id="nav-scan" onclick="switchTab('scan')">
+      <svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zM19 13h-1.5v-1.5H19V13z"/></svg>
+      <span>Scan</span>
+    </div>
+    <div class="nav-item" id="nav-profile" onclick="switchTab('profile')">
+      <svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+      <span>Patient</span>
+    </div>
+    <div class="nav-item" id="nav-reminders" onclick="switchTab('reminders')">
+      <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5S10 3.17 10 4v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+      <span>Reminders</span>
+    </div>
+    <div class="nav-item" id="nav-settings" onclick="switchTab('settings')">
+      <svg viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
+      <span>Settings</span>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAYS -->
+<div class="alert-overlay" id="alertOverlay">
+  <div class="alert-box">
+    <div class="alert-header">
+      <div class="alert-icon-wrap"><svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg></div>
+      <div><div class="alert-title">Unknown Substance Detected</div><div class="alert-msg">Cannot identify — do not administer</div></div>
+    </div>
+    <div class="alert-body">
+      <div class="alert-detail">drug: "UNKNOWN"<br>confidence: 0.12<br>status: -1<br>crc: "ok"<br>alert_sent: true</div>
+    </div>
+    <div class="alert-actions">
+      <button class="alert-btn btn-dismiss" onclick="hideAlert()">Dismiss</button>
+      <button class="alert-btn btn-alert" onclick="hideAlert();showToast('Emergency contact notified','error')">Alert Contact</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modalTitle">New Reminder</div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:18px;background:var(--bg3);border-radius:13px;padding:14px;border:1px solid var(--border)">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
+        <button onclick="adjustTime('hour',1)" style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;width:42px;height:30px;cursor:pointer;color:var(--text2);font-size:17px;line-height:1">&#9650;</button>
+        <div id="pickHour" style="font-size:36px;font-weight:700;color:var(--text);font-family:var(--mono);width:58px;text-align:center;cursor:pointer" onclick="focusHour()">08</div>
+        <button onclick="adjustTime('hour',-1)" style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;width:42px;height:30px;cursor:pointer;color:var(--text2);font-size:17px;line-height:1">&#9660;</button>
+      </div>
+      <div style="font-size:36px;font-weight:700;color:var(--text3);margin-bottom:4px">:</div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
+        <button onclick="adjustTime('min',5)" style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;width:42px;height:30px;cursor:pointer;color:var(--text2);font-size:17px;line-height:1">&#9650;</button>
+        <div id="pickMin" style="font-size:36px;font-weight:700;color:var(--text);font-family:var(--mono);width:58px;text-align:center;cursor:pointer" onclick="focusMin()">00</div>
+        <button onclick="adjustTime('min',-5)" style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;width:42px;height:30px;cursor:pointer;color:var(--text2);font-size:17px;line-height:1">&#9660;</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:5px;margin-left:9px">
+        <button id="pickAM" onclick="setAmPm('AM')" style="background:var(--accent);color:white;border:none;border-radius:7px;width:42px;height:34px;cursor:pointer;font-size:12px;font-weight:700;font-family:var(--font)">AM</button>
+        <button id="pickPM" onclick="setAmPm('PM')" style="background:var(--surface2);color:var(--text3);border:1px solid var(--border);border-radius:7px;width:42px;height:34px;cursor:pointer;font-size:12px;font-weight:700;font-family:var(--font)">PM</button>
+      </div>
+    </div>
+    <div class="modal-field"><div class="modal-label">LABEL</div><input type="text" id="modalLabelInput" class="modal-input" placeholder="e.g. Morning medication"></div>
+    <div class="modal-field"><div class="modal-label">REPEAT</div><select id="modalRepeatInput" class="modal-input"><option>Daily</option><option>Weekdays only</option><option>Weekly</option><option>Once</option></select></div>
+    <div class="modal-field"><div class="modal-label">ALERT TYPE</div><select id="modalAlertInput" class="modal-input"><option>Phone + Pi Speaker</option><option>Phone notification only</option><option>Pi speaker only</option></select></div>
+    <div class="modal-actions">
+      <button class="modal-btn btn-cancel" onclick="hideModal()">Cancel</button>
+      <button class="modal-btn btn-save" id="modalSaveBtn" onclick="saveReminder()">Save Reminder</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg viewBox="0 0 24 24" id="toastIcon"><path d=""/></svg>
+  <span id="toastMsg">Action completed</span>
+</div>
+
+<script>
+const f2=n=>String(n).padStart(2,'0');
+let isLight=false,isConnected=false,scanRunning=false;
+let editingId=null,pickerHour=8,pickerMin=0,pickerAmPm='AM';
+let pinEnabled=false,pinCode='1234',pinEntry='',pinAttempts=0;
+let sessionTimer=null,uptimeStart=Date.now(),offlineQueue=[];
+let lastDetectedDrug=null;
+
+/* ── MANUAL SCAN FLAG ──
+   When a scan is triggered manually, bypass the dupFilter check
+   so pressing Trigger Scan always processes the result.
+*/
+let isManualScan=false;
+
+/* ════════ PI SPEAK ════════ */
+let piSpeakEnabled=true,piSpeakTimer=null;
+async function announceDetection(drugName,conf,type){
+  if(type==='none')return;
+  const text=type==='unknown'?'Warning. Unknown substance detected.':drugName+'. Confidence '+conf+' percent.';
+  if(piSpeakEnabled&&isConnected&&bleCmdChar){
+    try{await bleSend({cmd:'speak',text});showPiSpeakBanner(text);return}catch(e){console.warn('[Pi speak] fallback:',e)}
+  }
+  if(voiceEnabled)browserSpeak(text);
+}
+function showPiSpeakBanner(text){const b=document.getElementById('piSpeakBanner'),l=document.getElementById('piSpeakText');if(!b||!l)return;l.textContent='Pi speaking: '+text;b.classList.add('active');clearTimeout(piSpeakTimer);piSpeakTimer=setTimeout(()=>b.classList.remove('active'),Math.max(4000,text.length*65));}
+function hidePiSpeakBanner(){clearTimeout(piSpeakTimer);const b=document.getElementById('piSpeakBanner');if(b)b.classList.remove('active');}
+
+/* ════════ BROWSER TTS ════════ */
+let currentUtter=null;
+function browserSpeak(text){if(!window.speechSynthesis)return;stopVoice();currentUtter=new SpeechSynthesisUtterance(text);currentUtter.rate=voiceRate;currentUtter.pitch=1;currentUtter.volume=1;const voices=window.speechSynthesis.getVoices();const pref=voices.find(v=>v.lang.startsWith('en')&&v.localService);if(pref)currentUtter.voice=pref;const b=document.getElementById('voiceBanner'),bt=document.getElementById('voiceBannerText');if(b&&bt){bt.textContent=text;b.classList.add('speaking')}currentUtter.onend=()=>{if(b)b.classList.remove('speaking');currentUtter=null};currentUtter.onerror=()=>{if(b)b.classList.remove('speaking');currentUtter=null};window.speechSynthesis.speak(currentUtter);}
+function stopVoice(){window.speechSynthesis&&window.speechSynthesis.cancel();const b=document.getElementById('voiceBanner');if(b)b.classList.remove('speaking');currentUtter=null;}
+function testVoiceSpeed(){if(!window.speechSynthesis){showToast('Speech synthesis not supported','error');return}browserSpeak('Voice speed test. Current speed is '+voiceRate.toFixed(1)+' times.');showToast('Voice test at '+voiceRate.toFixed(1)+'×','info');}
+
+/* ════════ AUDIO ════════ */
+let audioCtx=null;
+function ensureAudioCtx(){if(!audioCtx){try{audioCtx=new(window.AudioContext||window.webkitAudioContext)()}catch(e){return null}}if(audioCtx.state==='suspended')audioCtx.resume();return audioCtx;}
+function playTone(freq,startSec,durSec,type,gainPeak,ctx){try{const o=ctx.createOscillator(),g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.type=type||'sine';o.frequency.setValueAtTime(freq,startSec);g.gain.setValueAtTime(0,startSec);g.gain.linearRampToValueAtTime(gainPeak,startSec+0.01);g.gain.exponentialRampToValueAtTime(0.001,startSec+durSec);o.start(startSec);o.stop(startSec+durSec+0.05)}catch(_){}}
+function volScale(){const v=piVolume/100;return v*v;}
+function playTestSound(mode){const ctx=ensureAudioCtx();if(!ctx){setAudioStatus('Web Audio not supported','error');showToast('Audio not supported','error');return}const vol=volScale(),now=ctx.currentTime;if(mode==='beep'){[523.25,659.25,783.99].forEach((freq,i)=>playTone(freq,now+i*.18,.55-i*.06,'sine',.55*vol,ctx));playTone(1046.5,now+.36,.35,'sine',.2*vol,ctx);flashBtn('testSoundBtn','var(--blue-bg)');setAudioStatus('Playing chime — '+piVolume+'%','ok');showToast('Test sound at '+piVolume+'%','success');}else{[{f:880,t:0,dur:.13},{f:880,t:.18,dur:.13},{f:880,t:.36,dur:.13},{f:1100,t:.54,dur:.22}].forEach(p=>playTone(p.f,now+p.t,p.dur,'square',.45*vol,ctx));if(navigator.vibrate)navigator.vibrate([130,60,130,60,280]);flashBtn('testAlertBtn','var(--yellow-bg)');setAudioStatus('Alert sounding — '+piVolume+'%','warn');showToast('Alert test at '+piVolume+'%','warning');}if(isConnected&&bleCmdChar)bleSend({cmd:mode==='beep'?'test_sound':'test_alert',volume:piVolume}).catch(()=>{});}
+function flashBtn(id,bg){const btn=document.getElementById(id);if(!btn)return;const orig=btn.style.background;btn.style.background=bg;btn.style.transform='scale(0.96)';setTimeout(()=>{btn.style.background=orig;btn.style.transform=''},250);}
+function setAudioStatus(msg,level){const el=document.getElementById('audioStatusMsg');if(!el)return;el.textContent=msg;el.style.color=level==='error'?'var(--red)':level==='warn'?'var(--yellow)':level==='ok'?'var(--green)':'var(--text2)';}
+function triggerAlert(typeIdx){const type=ALERT_TYPES[typeIdx]||'Sound + Vibrate';if(type.includes('Sound'))playTestSound('alert');else if(type==='Vibrate Only'){if(navigator.vibrate)navigator.vibrate([200,100,200])}if(isConnected&&bleCmdChar)bleSend({cmd:'alert',alert_type:type,volume:piVolume}).catch(()=>{});}
+
+/* ════════ VOLUME BARS ════════ */
+function updateVolBars(val){const pct=parseInt(val)/100,bars=7,lit=Math.round(pct*bars);for(let i=0;i<bars;i++){const bar=document.getElementById('vb'+i);if(bar)bar.classList.toggle('active',i<lit)}const lbl=document.getElementById('volLevelText');if(!lbl)return;if(val==0)lbl.textContent='Muted';else if(val<=25)lbl.textContent='Low';else if(val<=50)lbl.textContent='Medium-Low';else if(val<=70)lbl.textContent='Medium';else if(val<=85)lbl.textContent='High';else lbl.textContent='Max';}
+
+/* ════════ BLE ════════ */
+const BLE_SERVICE_UUID='12345678-1234-1234-1234-123456789abc';
+const BLE_CMD_CHAR_UUID='dcba4321-dc43-ba21-fe65-dcba10987654';
+const BLE_RESULT_CHAR_UUID='abcd1234-ab12-cd34-ef56-abcdef012345';
+const BLE_STATUS_CHAR_UUID='aaaabbbb-cccc-dddd-eeee-ffffffffffff';
+let bleDevice=null,bleServer=null,bleCmdChar=null,bleResultChar=null,bleStatusChar=null;
+let bleReconnectTimer=null,pendingScanResolve=null;
+const enc=new TextEncoder(),dec=new TextDecoder();
+
+function store(k,v){try{localStorage.setItem('dr_'+k,JSON.stringify(v))}catch(e){}}
+function load(k,def){try{const v=localStorage.getItem('dr_'+k);return v!=null?JSON.parse(v):def}catch(e){return def}}
+
+let CONFIDENCE_THRESHOLD=70,falseAlertPrev=true,dupFilter=true,pushNotif=true,unknownAlert=true,autoReconnect=true;
+const ALERT_TYPES=['Sound + Vibrate','Sound Only','Vibrate Only','Silent'];
+let alertTypeIdx=0,piVolume=80,voiceEnabled=true,voiceRate=1.0;
+
+const interactions={'Ibuprofen':['Warfarin','Aspirin','Metformin'],'Paracetamol':['Warfarin'],'Amoxicillin':['Warfarin'],'Metformin':['Ibuprofen']};
+const dosageHints={'Amoxicillin':'typical dose is 500mg every 8 hours','Biogesic':'take 1 to 2 tablets every 4 to 6 hours','Paracetamol':'take 500mg to 1g every 4 to 6 hours','Ibuprofen':'take 200 to 400mg every 4 to 6 hours with food','Metformin':'take 500mg twice daily with meals'};
+
+let historyLog=load('history',[]);
+let histFilter='all';
+function saveHistory(){store('history',historyLog)}
+
+function addHistEntry(drug,conf,type){const now=new Date();historyLog.unshift({id:Date.now(),drug,conf,type,ts:now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'}),date:now.toLocaleDateString('en-US',{month:'short',day:'numeric'}),full:now.toISOString()});if(historyLog.length>200)historyLog.pop();saveHistory();renderHistory();updateDashboardStats();updateHistCountLabel();}
+
+function renderHistory(){const list=document.getElementById('historyList');const filtered=histFilter==='all'?historyLog:historyLog.filter(h=>h.type===histFilter);if(!filtered.length){list.innerHTML='<div class="empty-state"><div class="empty-icon"><svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg></div><div class="empty-title">No entries</div><div class="empty-sub">'+(histFilter==='all'?'Run a scan to begin':'No '+histFilter+' entries')+'</div></div>';document.getElementById('histSummary').style.display='none';return}list.innerHTML=filtered.map(h=>{const col=h.type==='detected'?(h.conf>=80?'var(--green)':h.conf>=50?'var(--yellow)':'var(--red)'):h.type==='unknown'?'var(--red)':'var(--text3)';const label=h.type==='unknown'?'UNKNOWN SUBSTANCE':h.type==='none'?'No Drug Detected':h.drug;return`<div class="hist-item"><div class="pulse-dot" style="background:${col};color:${col}"></div><div class="hist-info"><div class="hist-drug" style="color:${h.type==='unknown'?'var(--red)':h.type==='none'?'var(--text3)':'var(--text)'}">${label}</div><div class="hist-time">${h.date}, ${h.ts}</div></div><span class="hist-conf" style="color:${col}">${h.conf>0?h.conf+'%':'—'}</span></div>`;}).join('');const identified=historyLog.filter(h=>h.type==='detected').length,unknown=historyLog.filter(h=>h.type==='unknown').length,none=historyLog.filter(h=>h.type==='none').length,confs=historyLog.filter(h=>h.conf>0).map(h=>h.conf),avg=confs.length?Math.round(confs.reduce((a,b)=>a+b,0)/confs.length):null;document.getElementById('sumId').textContent=identified;document.getElementById('sumUnk').textContent=unknown;document.getElementById('sumNone').textContent=none;document.getElementById('sumConf').textContent=avg!=null?avg+'%':'—';document.getElementById('histSummary').style.display='block';}
+function updateHistCountLabel(){document.getElementById('histCountLabel').textContent=historyLog.length+' entr'+(historyLog.length===1?'y':'ies');document.getElementById('histSubLabel').textContent=historyLog.length+' total entries';}
+function filterHist(btn,f){histFilter=f;document.querySelectorAll('.filt-btn').forEach(b=>{b.style.background='var(--surface2)';b.style.color='var(--text3)';b.style.border='none';b.style.cursor='pointer';b.style.padding='5px 11px';b.style.borderRadius='20px';b.style.fontWeight='600';b.style.fontSize='10px'});btn.style.background='var(--blue-bg)';btn.style.color='var(--accent)';renderHistory();}
+function clearHistory(){if(confirm('Clear all detection history?')){historyLog=[];saveHistory();renderHistory();updateDashboardStats();updateHistCountLabel();showToast('History cleared','info');}}
+
+function updateDashboardStats(){const today=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'});document.getElementById('dashToday').textContent=historyLog.filter(h=>h.date===today).length;document.getElementById('dashUnknown').textContent=historyLog.filter(h=>h.type==='unknown').length;const confs=historyLog.filter(h=>h.conf>0).map(h=>h.conf);document.getElementById('dashAccuracy').textContent=confs.length?Math.round(confs.reduce((a,b)=>a+b,0)/confs.length)+'%':'—';updateTickerText();}
+function updateTickerText(){const today=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'});const cnt=historyLog.filter(h=>h.date===today).length;const up=Math.floor((Date.now()-uptimeStart)/60000);const h=Math.floor(up/60),m=up%60;document.getElementById('tickerText').textContent=`BLE ${isConnected?'CONNECTED':'DISCONNECTED'} · SIGNAL: ${document.getElementById('rssiVal').textContent}dBm · DrugRecognizer-Pi · UPTIME: ${h}h ${m}m · TODAY: ${cnt}`;document.getElementById('uptimeVal').textContent=h+'h '+f2(m)+'m';}
+
+let manualDoseOverrides=load('doseOverrides',{});
+function getTodayKey(){return new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'})}
+function getDosageData(){const today=getTodayKey();const todayScans=historyLog.filter(h=>h.type==='detected'&&h.date===today);const drugMap={};todayScans.forEach(h=>{if(!drugMap[h.drug])drugMap[h.drug]={drug:h.drug,scanned:0};drugMap[h.drug].scanned++});return Object.values(drugMap);}
+function renderDosageTracker(){const wrap=document.getElementById('dosageTracker');if(!wrap)return;const data=getDosageData();if(!data.length){wrap.innerHTML='<div style="font-size:11px;color:var(--text3);text-align:center;padding:7px 0">No drugs scanned today</div>';return}const today=getTodayKey();wrap.innerHTML=data.map(p=>{const key=p.drug+':'+today;const taken=manualDoseOverrides[key]!==undefined?manualDoseOverrides[key]:p.scanned;const max=Math.max(taken,p.scanned,1);const pills=Array.from({length:max},(_,j)=>{const cls=j<taken?'taken':'';const icon=j<taken?'&#10003;':(j+1);return`<div class="dose-pill ${cls}" data-drug="${p.drug}" data-idx="${j}" onclick="manualToggleDose(this)">${icon}</div>`;}).join('');return`<div style="display:flex;align-items:center;gap:9px"><div style="font-size:12px;font-weight:500;color:var(--text);min-width:84px;flex-shrink:0">${p.drug}</div><div style="display:flex;gap:5px;flex:1;flex-wrap:wrap">${pills}</div><div style="font-size:10px;color:var(--green);font-family:var(--mono);flex-shrink:0">${taken}/${p.scanned}</div></div>`;}).join('');}
+function manualToggleDose(el){const drug=el.dataset.drug,idx=parseInt(el.dataset.idx),today=getTodayKey(),key=drug+':'+today,data=getDosageData().find(d=>d.drug===drug);if(!data)return;const current=manualDoseOverrides[key]!==undefined?manualDoseOverrides[key]:data.scanned;manualDoseOverrides[key]=idx<current?idx:idx+1;store('doseOverrides',manualDoseOverrides);renderDosageTracker();showToast(drug+' dose '+(idx+1)+' '+(idx<current?'cleared':'confirmed'),'success');}
+function checkInteraction(drugName){const recent=historyLog.filter(h=>h.type==='detected'&&h.drug!==drugName).slice(0,5).map(h=>h.drug);const known=interactions[drugName]||[];const found=recent.filter(r=>known.includes(r));const wrap=document.getElementById('interactionWarn');if(found.length){wrap.style.display='block';wrap.innerHTML=`<div class="interaction-badge">&#9888; Interaction: ${found.join(', ')}</div>`;showToast('Drug interaction: '+found.join(', '),'warning')}else{wrap.style.display='none'}}
+
+let lastRaw=null;
+
+/* ── THE FIX: updateDashboard now accepts an optional bypassDup flag.
+   Manual scans always pass bypassDup=true so the dup filter is skipped. ── */
+function updateDashboard(drug,conf,type,bypassDup){
+  const raw=drug+'|'+conf;
+  if(!bypassDup&&dupFilter&&raw===lastRaw)return;
+  lastRaw=raw;
+  const color=type==='detected'?(conf>=80?'var(--green)':conf>=50?'var(--yellow)':'var(--red)'):type==='unknown'?'var(--red)':'var(--text3)';
+  const bg=type==='detected'?(conf>=80?'var(--green-bg)':conf>=50?'var(--yellow-bg)':'var(--red-bg)'):type==='unknown'?'var(--red-bg)':'var(--surface2)';
+  document.getElementById('detectRing').style.borderColor=color;
+  document.getElementById('detectRingInner').style.background=bg;
+  document.getElementById('detectRingInner').style.color=color;
+  document.getElementById('detectRingInner').textContent=conf>0?conf+'%':'—';
+  document.getElementById('detectName').textContent=type==='none'?'No Drug Detected':type==='unknown'?'Unknown Substance':drug;
+  document.getElementById('detectSub').textContent=type==='none'?'No substance in detection area':type==='unknown'?'Unidentifiable compound — alert triggered':drug+' · '+conf+'% confidence';
+  document.getElementById('confBar').style.width=conf+'%';document.getElementById('confBar').style.background=color;
+  document.getElementById('confLabel').style.color=color;document.getElementById('confLabel').textContent=conf>0?conf+'%':'—';
+  const now=new Date();document.getElementById('detectTime').textContent=f2(now.getHours())+':'+f2(now.getMinutes())+':'+f2(now.getSeconds());
+  document.getElementById('detectStatus').textContent=type==='detected'?'✓ Detected':type==='unknown'?'⚠ Unknown':type==='none'?'— No Drug':'— Idle';
+  document.getElementById('detectStatus').style.color=color;
+  if(type==='detected'){checkInteraction(drug);renderDosageTracker();checkAllergyConflict(drug)}
+  if(type==='unknown'&&unknownAlert){triggerAlert(alertTypeIdx);showAlert()}
+  lastDetectedDrug=type==='detected'?drug:null;
+  addHistEntry(drug,conf,type);updateDashboardStats();
+  announceDetection(drug,conf,type);
+}
+
+function addBLEEntry(drug,conf,type){const entries=document.getElementById('bleEntries');const now=new Date();const ts=f2(now.getHours())+':'+f2(now.getMinutes())+':'+f2(now.getSeconds());const status=type==='detected'?1:type==='unknown'?-1:0;if(entries.querySelector('div[style*="italic"]'))entries.innerHTML='';const div=document.createElement('div');div.className='ble-entry';div.innerHTML=`<span style="color:var(--text3)">${ts} </span><span class="ble-key">drug</span>: <span class="ble-val">"${drug}"</span> <span class="ble-key">conf</span>: <span class="ble-val">${(conf/100).toFixed(2)}</span> <span class="ble-key">status</span>: <span class="ble-val">${status}</span>`;entries.insertBefore(div,entries.firstChild);if(entries.children.length>8)entries.removeChild(entries.lastChild);if(!isConnected){offlineQueue.push({drug,conf,type,ts});document.getElementById('queueCount').textContent=offlineQueue.length}}
+
+function setScanAnimState(active){const el=document.getElementById('scanAnimEl');if(!el)return;if(active)el.classList.remove('idle');else el.classList.add('idle');}
+
+async function runManualScan(){
+  if(scanRunning){showToast('Scan already in progress...','info');return}
+  if(!isConnected||!bleCmdChar){showToast('Not connected — tap the BLE badge to connect','error');return}
+  scanRunning=true;
+  isManualScan=true; // flag: this is a manual scan — bypass dup filter
+  const btn=document.getElementById('scanBtn');const status=document.getElementById('scanStatus');const sub=document.getElementById('scanSub');const result=document.getElementById('scanResult');
+  setScanAnimState(true);btn.disabled=true;btn.style.opacity='0.5';btn.textContent='Scanning...';
+  status.textContent='Sending command to Pi...';sub.textContent='Waiting for Pi to respond';result.style.display='none';
+  try{
+    await bleSend({cmd:'scan',mode:'force',ts:Date.now()});
+    status.textContent='Pi scanning...';sub.textContent='Waiting for drug detection';
+    const data=await new Promise((resolve,reject)=>{pendingScanResolve=resolve;setTimeout(()=>{if(pendingScanResolve){pendingScanResolve=null;reject(new Error('timeout'))}},30000);});
+    const drugName=data.drug||'None';let conf=Math.round((parseFloat(data.conf)||0)*100);let type=data.type||'none';
+    if(type==='detected'&&conf<CONFIDENCE_THRESHOLD){conf=0;type='none'}
+    const color=type==='detected'?(conf>=80?'var(--green)':conf>=50?'var(--yellow)':'var(--red)'):type==='unknown'?'var(--red)':'var(--text3)';
+    const bg=type==='detected'?(conf>=80?'var(--green-bg)':conf>=50?'var(--yellow-bg)':'var(--red-bg)'):type==='unknown'?'var(--red-bg)':'var(--surface2)';
+    document.getElementById('scanResRing').style.borderColor=color;
+    const inner=document.getElementById('scanResConf');inner.style.background=bg;inner.style.color=color;inner.textContent=conf>0?conf+'%':'—';
+    document.getElementById('scanResDrug').textContent=type==='none'?'No Drug Detected':type==='unknown'?'Unknown Substance':drugName;
+    document.getElementById('scanResSub').textContent=type==='none'?'Empty detection area':type==='unknown'?'Unidentifiable compound':drugName+' · '+conf+'% confidence';
+    document.getElementById('scanResJson').textContent=JSON.stringify({drug:drugName,conf:parseFloat((conf/100).toFixed(2)),status:type==='detected'?1:type==='unknown'?-1:0,ts:data.ts||Date.now(),crc:data.crc||'ok'});
+    result.style.display='block';
+    status.textContent=type==='detected'?'✓ Drug Detected':type==='unknown'?'⚠ Unknown Substance':'No Drug Found';
+    sub.textContent=type==='detected'?drugName+' at '+conf+'%':type==='unknown'?'Could not identify':'Nothing detected';
+    addBLEEntry(drugName,conf,type);
+    // Pass true to bypass dup filter for manual scans
+    updateDashboard(drugName,conf,type,true);
+    if(type==='unknown')showAlert();
+    else showToast('Scan: '+drugName+(conf?' ('+conf+'%)':''),type==='detected'?'success':type==='none'?'info':'error');
+  }catch(e){
+    pendingScanResolve=null;
+    if(e.message==='timeout'){status.textContent='Timed out';sub.textContent='No detection in 30s — try again';showToast('Scan timed out','error')}
+    else{status.textContent='BLE error';sub.textContent=e.message||'Unknown error';showToast('Scan error: '+(e.message||'unknown'),'error')}
+  }finally{
+    scanRunning=false;
+    isManualScan=false;
+    btn.disabled=false;btn.style.opacity='1';btn.textContent='Trigger Scan';
+    setScanAnimState(false);
+  }
+}
+
+function triggerScan(btn){btn.classList.add('ripple');setTimeout(()=>btn.classList.remove('ripple'),600);switchTab('scan');setTimeout(()=>runManualScan(),300);}
+
+async function bleConnect(){if(!navigator.bluetooth){showToast('Web Bluetooth not supported','error');return}const badge=document.getElementById('connBadge');const statusText=document.getElementById('connStatusText');badge.textContent='Scanning...';badge.className='conn-badge badge-scanning';statusText.textContent='Scanning...';statusText.style.color='var(--accent)';try{bleDevice=await navigator.bluetooth.requestDevice({filters:[{name:'DrugRecognizer-Pi'}],optionalServices:[BLE_SERVICE_UUID]});bleDevice.addEventListener('gattserverdisconnected',onBleDisconnected);await bleConnectGatt()}catch(e){badge.textContent='Disconnected';badge.className='conn-badge badge-disconnected';statusText.textContent='Scan cancelled';statusText.style.color='var(--red)';showToast('BLE scan cancelled','info');}}
+async function bleConnectGatt(){const badge=document.getElementById('connBadge');const statusText=document.getElementById('connStatusText');try{bleServer=await bleDevice.gatt.connect();const service=await bleServer.getPrimaryService(BLE_SERVICE_UUID);bleCmdChar=await service.getCharacteristic(BLE_CMD_CHAR_UUID);bleResultChar=await service.getCharacteristic(BLE_RESULT_CHAR_UUID);try{bleStatusChar=await service.getCharacteristic(BLE_STATUS_CHAR_UUID)}catch(_){}await bleResultChar.startNotifications();bleResultChar.addEventListener('characteristicvaluechanged',onBleResult);isConnected=true;badge.textContent='Connected';badge.className='conn-badge badge-connected';statusText.textContent='Connected · BLE Active';statusText.style.color='var(--green)';document.getElementById('diagBle').textContent='Active';showToast('Connected to DrugRecognizer-Pi','success');if(offlineQueue.length){showToast('Synced '+offlineQueue.length+' buffered packets','info');offlineQueue=[];document.getElementById('queueCount').textContent='0'}clearInterval(bleReconnectTimer);bleReconnectTimer=setInterval(blePollStatus,5000);syncSettingsToPi()}catch(e){isConnected=false;badge.textContent='Disconnected';badge.className='conn-badge badge-disconnected';statusText.textContent='GATT failed';statusText.style.color='var(--red)';showToast('BLE connection failed: '+e.message,'error');}}
+function onBleDisconnected(){isConnected=false;bleCmdChar=null;bleResultChar=null;bleStatusChar=null;document.getElementById('connBadge').textContent='Disconnected';document.getElementById('connBadge').className='conn-badge badge-disconnected';document.getElementById('connStatusText').textContent='Disconnected · Reconnecting...';document.getElementById('connStatusText').style.color='var(--red)';document.getElementById('diagBle').textContent='Offline';showToast('BLE disconnected','error');hidePiSpeakBanner();if(pendingScanResolve){pendingScanResolve=null;scanRunning=false;isManualScan=false;setScanAnimState(false);const btn=document.getElementById('scanBtn');if(btn){btn.disabled=false;btn.style.opacity='1';btn.textContent='Trigger Scan'}}setTimeout(async()=>{if(bleDevice&&!bleDevice.gatt.connected){try{await bleConnectGatt()}catch(_){}}},2000);}
+async function blePollStatus(){if(!isConnected||!bleStatusChar)return;try{const val=await bleStatusChar.readValue();const json=JSON.parse(dec.decode(val));if(json.rssi!==undefined){document.getElementById('rssiVal').textContent=json.rssi;document.getElementById('rssiVal').style.color=json.rssi>-65?'var(--green)':json.rssi>-75?'var(--yellow)':'var(--red)'}if(json.uptime!==undefined){const h=Math.floor(json.uptime/3600),m=Math.floor((json.uptime%3600)/60);document.getElementById('uptimeVal').textContent=h+'h '+f2(m)+'m'}if(json.temp!==undefined)document.getElementById('diagTemp').textContent=json.temp+'°C'}catch(_){}}
+function onBleResult(event){const raw=dec.decode(event.target.value);let data;try{data=JSON.parse(raw)}catch(_){return}addBLEEntry(data.drug||'?',Math.round((data.conf||0)*100),data.type||'none');if(pendingScanResolve){pendingScanResolve(data);pendingScanResolve=null;}}
+async function bleSend(obj){if(!bleCmdChar)throw new Error('BLE not connected');await bleCmdChar.writeValueWithResponse(enc.encode(JSON.stringify(obj)));}
+async function toggleConn(){if(isConnected){clearInterval(bleReconnectTimer);if(bleDevice&&bleDevice.gatt.connected)bleDevice.gatt.disconnect();isConnected=false;bleCmdChar=null;bleResultChar=null;document.getElementById('connBadge').textContent='Disconnected';document.getElementById('connBadge').className='conn-badge badge-disconnected';document.getElementById('connStatusText').textContent='Disconnected';document.getElementById('connStatusText').style.color='var(--red)';showToast('BLE disconnected','info')}else{await bleConnect()}}
+function syncSettingsToPi(){if(!isConnected||!bleCmdChar)return;bleSend({cmd:'sync_settings',speaker:load('piSpeaker',true),alert_type:ALERT_TYPES[alertTypeIdx],volume:piVolume}).catch(()=>{});}
+
+/* ════════ REMINDERS ════════ */
+let reminders=load('reminders',[{id:1,hour:8,min:0,ampm:'AM',label:'Morning Medication',repeat:'Daily',alert:'Phone + Pi Speaker',on:true},{id:2,hour:2,min:0,ampm:'PM',label:'Afternoon Dose',repeat:'Weekdays only',alert:'Phone notification only',on:true},{id:3,hour:9,min:30,ampm:'PM',label:'Evening Pills',repeat:'Daily',alert:'Pi speaker only',on:false}]);
+let nextId=load('nextRid',4);
+function saveReminders(){store('reminders',reminders);store('nextRid',nextId)}
+function displayTime(r){return f2(r.hour)+':'+f2(r.min)+' '+r.ampm}
+function renderReminders(){const list=document.getElementById('reminderList');if(!reminders.length){list.innerHTML='<div class="empty-state"><div class="empty-icon"><svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5S10 3.17 10 4v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg></div><div class="empty-title">No reminders</div><div class="empty-sub">Tap + to add one</div></div>';updateNextReminderLabel();return}const sorted=[...reminders].sort((a,b)=>{const t=r=>(r.ampm==='PM'&&r.hour!==12?r.hour+12:r.ampm==='AM'&&r.hour===12?0:r.hour)*60+r.min;return t(a)-t(b)});list.innerHTML=sorted.map(r=>`<div class="reminder-item"><div style="min-width:82px"><div class="rem-time" style="color:${r.on?'var(--text)':'var(--text3)'}">${displayTime(r)}</div></div><div class="rem-info"><div class="rem-label" style="color:${r.on?'var(--text)':'var(--text3)'}">${r.label||'Untitled'}</div><div class="rem-repeat">${r.repeat} · ${r.alert}</div></div><div style="display:flex;flex-direction:column;gap:5px;align-items:center"><button class="toggle ${r.on?'on':'off'}" onclick="toggleReminder(${r.id})"></button><div style="display:flex;gap:4px"><button onclick="editReminder(${r.id})" style="background:var(--blue-bg);border:none;border-radius:5px;width:24px;height:24px;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:var(--accent)"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.21c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button><button onclick="deleteReminder(${r.id})" style="background:var(--red-bg);border:none;border-radius:5px;width:24px;height:24px;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:var(--red)"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button></div></div></div>`).join('');updateNextReminderLabel();}
+function updateNextReminderLabel(){const active=reminders.filter(r=>r.on);if(!active.length){document.getElementById('nextReminderLabel').textContent='No alarms set';return}const now=new Date();const nowM=now.getHours()*60+now.getMinutes();const toMins=r=>(r.ampm==='PM'&&r.hour!==12?r.hour+12:r.ampm==='AM'&&r.hour===12?0:r.hour)*60+r.min;const upcoming=active.filter(r=>toMins(r)>nowM).sort((a,b)=>toMins(a)-toMins(b));const next=upcoming[0]||active.sort((a,b)=>toMins(a)-toMins(b))[0];document.getElementById('nextReminderLabel').textContent='Next: '+displayTime(next);}
+function toggleReminder(id){const r=reminders.find(x=>x.id===id);if(!r)return;r.on=!r.on;saveReminders();renderReminders();showToast('"'+r.label+'" '+(r.on?'enabled':'disabled'),r.on?'success':'info')}
+function deleteReminder(id){const r=reminders.find(x=>x.id===id);reminders=reminders.filter(x=>x.id!==id);saveReminders();renderReminders();showToast('Deleted "'+(r?.label||'reminder')+'"','info')}
+function editReminder(id){const r=reminders.find(x=>x.id===id);if(!r)return;editingId=id;document.getElementById('modalTitle').textContent='Edit Reminder';document.getElementById('modalSaveBtn').textContent='Update Reminder';document.getElementById('modalLabelInput').value=r.label;document.getElementById('modalRepeatInput').value=r.repeat;document.getElementById('modalAlertInput').value=r.alert;pickerHour=r.hour;pickerMin=r.min;pickerAmPm=r.ampm;syncPickerUI();showModal();}
+function openNewReminder(){editingId=null;document.getElementById('modalTitle').textContent='New Reminder';document.getElementById('modalSaveBtn').textContent='Save Reminder';document.getElementById('modalLabelInput').value='';document.getElementById('modalRepeatInput').value='Daily';document.getElementById('modalAlertInput').value='Phone + Pi Speaker';pickerHour=8;pickerMin=0;pickerAmPm='AM';syncPickerUI();showModal();}
+function saveReminder(){const label=document.getElementById('modalLabelInput').value.trim()||'Medication';const repeat=document.getElementById('modalRepeatInput').value;const alert=document.getElementById('modalAlertInput').value;if(editingId!==null){const r=reminders.find(x=>x.id===editingId);if(r){r.hour=pickerHour;r.min=pickerMin;r.ampm=pickerAmPm;r.label=label;r.repeat=repeat;r.alert=alert}showToast('Reminder updated','success')}else{reminders.push({id:nextId++,hour:pickerHour,min:pickerMin,ampm:pickerAmPm,label,repeat,alert,on:true});showToast('Saved for '+f2(pickerHour)+':'+f2(pickerMin)+' '+pickerAmPm,'success')}saveReminders();renderReminders();hideModal();}
+let activeReminderTimers={};
+function fireReminder(r){const label=r.label||'Medication',alertPref=r.alert||'Phone + Pi Speaker';let count=0;const MAX_REPEATS=3;function doBeep(){count++;showToast('⏰ Reminder ('+count+'/'+MAX_REPEATS+'): '+label,'warning');playTestSound('beep');if(navigator.vibrate)navigator.vibrate([200,100,200,100,400]);if(isConnected&&bleCmdChar)bleSend({cmd:'reminder_alert',label,alert:alertPref}).catch(()=>{});if(count<MAX_REPEATS)activeReminderTimers[r.id]=setTimeout(doBeep,90000);else delete activeReminderTimers[r.id];}if(activeReminderTimers[r.id])clearTimeout(activeReminderTimers[r.id]);doBeep();}
+setInterval(()=>{const now=new Date();const h=now.getHours(),m=now.getMinutes(),s=now.getSeconds();if(s!==0)return;reminders.filter(r=>r.on).forEach(r=>{const rh=r.ampm==='PM'&&r.hour!==12?r.hour+12:r.ampm==='AM'&&r.hour===12?0:r.hour;if(rh===h&&r.min===m)fireReminder(r);});},1000);
+
+function syncPickerUI(){document.getElementById('pickHour').textContent=f2(pickerHour);document.getElementById('pickMin').textContent=f2(pickerMin);const aOn='background:var(--accent);color:white;border:none;border-radius:7px;width:42px;height:34px;cursor:pointer;font-size:12px;font-weight:700;font-family:var(--font)';const aOff='background:var(--surface2);color:var(--text3);border:1px solid var(--border);border-radius:7px;width:42px;height:34px;cursor:pointer;font-size:12px;font-weight:700;font-family:var(--font)';if(pickerAmPm==='AM'){document.getElementById('pickAM').style.cssText=aOn;document.getElementById('pickPM').style.cssText=aOff}else{document.getElementById('pickPM').style.cssText=aOn;document.getElementById('pickAM').style.cssText=aOff}}
+function adjustTime(part,delta){if(part==='hour')pickerHour=((pickerHour-1+delta+12)%12)+1;else pickerMin=(pickerMin+delta+60)%60;syncPickerUI();}
+function setAmPm(val){pickerAmPm=val;syncPickerUI()}
+function focusHour(){const v=prompt('Hour (1–12):',pickerHour);if(v===null)return;const n=parseInt(v);if(!isNaN(n)&&n>=1&&n<=12){pickerHour=n;syncPickerUI()}else showToast('Enter 1–12','warning')}
+function focusMin(){const v=prompt('Minutes (0–59):',pickerMin);if(v===null)return;const n=parseInt(v);if(!isNaN(n)&&n>=0&&n<=59){pickerMin=n;syncPickerUI()}else showToast('Enter 0–59','warning')}
+
+/* ════════ PIN ════════ */
+function openPinSetup(){const newPin=prompt('Set a 4-digit PIN (blank to disable):');if(newPin===null)return;if(newPin===''){pinEnabled=false;store('pinEnabled',false);document.getElementById('pinLockSub').textContent='Disabled — tap to enable';showToast('PIN lock disabled','info')}else if(/^\d{4}$/.test(newPin)){pinCode=newPin;pinEnabled=true;store('pinEnabled',true);store('pinCode',newPin);document.getElementById('pinLockSub').textContent='Enabled · ****';showToast('PIN lock enabled','success')}else showToast('Must be exactly 4 digits','warning');}
+function showPinScreen(){document.getElementById('pinScreen').classList.add('show')}
+function hidePinScreen(){document.getElementById('pinScreen').classList.remove('show')}
+function pinPress(n){if(pinEntry.length>=4)return;pinEntry+=n;updatePinDots();if(pinEntry.length===4)setTimeout(checkPin,150)}
+function pinDel(){if(pinEntry.length>0){pinEntry=pinEntry.slice(0,-1);updatePinDots()}}
+function updatePinDots(){for(let i=0;i<4;i++){const d=document.getElementById('pd'+i);d.classList.toggle('filled',i<pinEntry.length);d.classList.remove('error')}}
+function checkPin(){if(pinEntry===pinCode){hidePinScreen();pinEntry='';updatePinDots();resetSessionTimer()}else{pinAttempts++;for(let i=0;i<4;i++)document.getElementById('pd'+i).classList.add('error');document.getElementById('pinDots').classList.add('pin-error-shake');document.getElementById('pinSub').textContent='Incorrect PIN ('+pinAttempts+' attempt'+(pinAttempts>1?'s':'')+')';setTimeout(()=>{pinEntry='';updatePinDots();document.getElementById('pinDots').classList.remove('pin-error-shake');document.getElementById('pinSub').textContent='DrugRecognizer is locked'},600);}}
+function resetSessionTimer(){clearTimeout(sessionTimer);if(pinEnabled)sessionTimer=setTimeout(()=>{showPinScreen();showToast('Session timed out','info')},300000)}
+document.addEventListener('keydown',resetSessionTimer);
+
+/* ════════ OVERLAYS ════════ */
+function showAlert(){document.getElementById('alertOverlay').classList.add('show')}
+function hideAlert(){document.getElementById('alertOverlay').classList.remove('show')}
+function showModal(){document.getElementById('modalOverlay').classList.add('show')}
+function hideModal(){document.getElementById('modalOverlay').classList.remove('show');editingId=null}
+let toastTimer;
+function showToast(msg,type){const t=document.getElementById('toast');const ico=document.getElementById('toastIcon');document.getElementById('toastMsg').textContent=msg;const colors={success:'var(--green)',error:'var(--red)',info:'var(--accent)',warning:'var(--yellow)'};const paths={success:'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z',error:'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z',info:'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z',warning:'M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z'};ico.style.fill=colors[type]||colors.info;ico.innerHTML='<path d="'+paths[type]+'"/>';t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2800);}
+
+/* ════════ NAVIGATION ════════ */
+function switchTab(tab){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));document.getElementById('screen-'+tab).classList.add('active');const navEl=document.getElementById('nav-'+tab);if(navEl)navEl.classList.add('active');document.getElementById('contentInner').scrollTop=0;if(tab!=='scan')setScanAnimState(false);resetSessionTimer();}
+function toggleMode(){isLight=!isLight;document.getElementById('appShell').classList.toggle('light',isLight);document.body.classList.toggle('light',isLight);document.getElementById('themeLabel').textContent=isLight?'Light Mode active':'Dark Mode active';showToast(isLight?'Light mode':'Dark mode','info');store('theme',isLight?'light':'dark');}
+function refreshDiag(){showToast('Polling Pi diagnostics...','info');setTimeout(()=>{document.getElementById('diagCam').textContent=isConnected?'Online':'Offline';document.getElementById('diagCam').style.color=isConnected?'var(--green)':'var(--red)';showToast('Diagnostics refreshed','success')},800);}
+function updatePiVolume(val){piVolume=parseInt(val);document.getElementById('piVolLabel').textContent=piVolume+'%';store('piVolume',piVolume);updateVolBars(piVolume);if(isConnected&&bleCmdChar)bleSend({cmd:'set_volume',volume:piVolume}).catch(()=>{});}
+function toggleSetting(btn,key){btn.classList.toggle('on');btn.classList.toggle('off');const val=btn.classList.contains('on');store(key,val);if(key==='dupFilter')dupFilter=val;if(key==='unknownAlert')unknownAlert=val;if(key==='piSpeakEnabled')piSpeakEnabled=val;if(key==='piSpeaker'&&isConnected&&bleCmdChar)bleSend({cmd:'set_speaker',enabled:val}).catch(()=>{});showToast((val?'Enabled':'Disabled')+' setting','info');}
+function updateConfThreshold(val){CONFIDENCE_THRESHOLD=parseInt(val);document.getElementById('threshVal').textContent=val+'%';store('confThreshold',CONFIDENCE_THRESHOLD);}
+function cycleAlertType(){alertTypeIdx=(alertTypeIdx+1)%ALERT_TYPES.length;store('alertTypeIdx',alertTypeIdx);const label=ALERT_TYPES[alertTypeIdx];document.getElementById('alertTypeLabel').textContent=label;const sub=document.getElementById('alertTypeSub');if(sub)sub.textContent='Alert type: '+label;showToast('Alert type: '+label,'info');}
+function toggleVoiceSetting(btn){btn.classList.toggle('on');btn.classList.toggle('off');voiceEnabled=btn.classList.contains('on');store('voiceEnabled',voiceEnabled);showToast(voiceEnabled?'Browser voice on':'Browser voice off','info');}
+function updateVoiceRate(val){voiceRate=parseFloat(parseFloat(val).toFixed(1));document.getElementById('voiceRateLabel').textContent=voiceRate.toFixed(1)+'×';store('voiceRate',voiceRate);if(currentUtter&&window.speechSynthesis){window.speechSynthesis.cancel();currentUtter=null;}}
+
+/* ════════ FONT SIZE ════════ */
+let fontPanelOpen=false;
+function toggleFontPanel(){fontPanelOpen=!fontPanelOpen;document.getElementById('fontSizePanel').classList.toggle('open',fontPanelOpen)}
+function applyFontSize(val,silent){val=parseInt(val);if(isNaN(val))val=100;document.getElementById('fontSlider').value=val;document.getElementById('fontSizeLabel').textContent=val+'%';const scale=val/100;const wrap=document.getElementById('scaleWrap');wrap.style.transform='scale('+scale+')';wrap.style.transformOrigin='top left';wrap.style.width=Math.round(100/scale)+'%';wrap.style.height='auto';const idx=val<=89?0:val<=104?1:val<=119?2:3;document.querySelectorAll('.fp-btn').forEach((b,i)=>b.classList.toggle('active',i===idx));if(!silent)store('fontSize',val);}
+function setFontPreset(val,btn){applyFontSize(val);document.querySelectorAll('.fp-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}
+document.addEventListener('click',e=>{if(fontPanelOpen&&!e.target.closest('#fontSizePanel')&&!e.target.closest('#fontToggleBtn')){fontPanelOpen=false;document.getElementById('fontSizePanel').classList.remove('open')}resetSessionTimer();},{capture:true});
+
+/* ════════ PROFILE ════════ */
+let profile=load('patientProfile',{name:'',age:'',sex:'',blood:'',weight:'',conditions:'',allergies:[],medications:[],emergName:'',emergPhone:'',emergRel:'',avatar:''});
+function renderProfileChips(){const ac=document.getElementById('allergyChips'),mc=document.getElementById('medChips');if(!ac||!mc)return;ac.innerHTML=profile.allergies.map((a,i)=>`<span class="allergy-chip">${a}<button onclick="removeAllergy(${i})">×</button></span>`).join('');mc.innerHTML=profile.medications.map((m,i)=>`<span class="med-chip">${m}<button onclick="removeMed(${i})">×</button></span>`).join('');}
+function renderProfileHero(){const dn=document.getElementById('profileDisplayName');if(!dn)return;dn.textContent=profile.name||'Patient Name';document.getElementById('profileDisplayMeta').textContent='Age '+(profile.age||'—')+' · Blood Type '+(profile.blood||'—')+(profile.sex?' · '+profile.sex:'');document.getElementById('profileDisplayAllergies').innerHTML=profile.allergies.slice(0,3).map(a=>`<span class="allergy-chip" style="margin:2px 2px 0 0">${a}</span>`).join('');if(profile.avatar){document.getElementById('avatarImg').src=profile.avatar;document.getElementById('avatarImg').style.display='block';document.getElementById('avatarIcon').style.display='none'}}
+function loadProfileForm(){document.getElementById('pName').value=profile.name||'';document.getElementById('pAge').value=profile.age||'';document.getElementById('pSex').value=profile.sex||'';document.getElementById('pBlood').value=profile.blood||'';document.getElementById('pWeight').value=profile.weight||'';document.getElementById('pConditions').value=profile.conditions||'';document.getElementById('pEmergName').value=profile.emergName||'';document.getElementById('pEmergPhone').value=profile.emergPhone||'';document.getElementById('pEmergRel').value=profile.emergRel||'';renderProfileChips();renderProfileHero();}
+function saveProfile(){profile.name=document.getElementById('pName').value.trim();profile.age=document.getElementById('pAge').value.trim();profile.sex=document.getElementById('pSex').value;profile.blood=document.getElementById('pBlood').value;profile.weight=document.getElementById('pWeight').value.trim();profile.conditions=document.getElementById('pConditions').value.trim();profile.emergName=document.getElementById('pEmergName').value.trim();profile.emergPhone=document.getElementById('pEmergPhone').value.trim();profile.emergRel=document.getElementById('pEmergRel').value.trim();store('patientProfile',profile);renderProfileHero();showToast('Patient profile saved','success');}
+function addAllergy(){const inp=document.getElementById('allergyInput'),val=inp.value.trim();if(!val)return;if(!profile.allergies.includes(val))profile.allergies.push(val);inp.value='';renderProfileChips();store('patientProfile',profile)}
+function removeAllergy(i){profile.allergies.splice(i,1);renderProfileChips();store('patientProfile',profile)}
+function addMed(){const inp=document.getElementById('medInput'),val=inp.value.trim();if(!val)return;if(!profile.medications.includes(val))profile.medications.push(val);inp.value='';renderProfileChips();store('patientProfile',profile)}
+function removeMed(i){profile.medications.splice(i,1);renderProfileChips();store('patientProfile',profile)}
+function loadAvatar(input){const file=input.files[0];if(!file)return;const reader=new FileReader();reader.onload=e=>{profile.avatar=e.target.result;store('patientProfile',profile);document.getElementById('avatarImg').src=e.target.result;document.getElementById('avatarImg').style.display='block';document.getElementById('avatarIcon').style.display='none'};reader.readAsDataURL(file)}
+function checkAllergyConflict(drug){const match=profile.allergies.some(a=>drug.toLowerCase().includes(a.toLowerCase())||a.toLowerCase().includes(drug.toLowerCase()));if(match){showToast('⚠ ALLERGY ALERT: '+drug+' matches patient allergies!','error');setTimeout(()=>showAlert(),300)}}
+
+/* ════════ ONBOARDING ════════ */
+const OB_TOTAL_STEPS=7;
+const OB_CONDITIONS=['Hypertension','Diabetes (Type 1)','Diabetes (Type 2)','Asthma','Heart Disease','Kidney Disease','Liver Disease','Thyroid Disorder','Epilepsy / Seizures','Arthritis','GERD / Acid Reflux','Anemia','Depression / Anxiety','COPD','High Cholesterol','Cancer (current/past)'];
+const OB_QUICK_ALLERGIES=['Penicillin','Sulfa Drugs','Aspirin','Ibuprofen','Codeine','Tetracycline','Erythromycin','Latex'];
+const OB_QUICK_MEDS=['Metformin','Amlodipine','Losartan','Atorvastatin','Omeprazole','Paracetamol','Aspirin (low dose)','Insulin','Salbutamol','Amoxicillin'];
+const OB_STEP_META=[{label:'Welcome',title:'Welcome to DrugRecognizer',sub:'A quick setup to personalize your experience.'},{label:'Basic Info',title:'Who is this patient?',sub:'Full name is required.'},{label:'Conditions',title:'Medical History',sub:'Select all that apply.'},{label:'Allergies',title:'Known Allergies',sub:'Add drug allergies. Strongly recommended.'},{label:'Medications',title:'Current Medications',sub:'List all medications.'},{label:'Contact',title:'Emergency Contact',sub:'Optional but recommended.'},{label:'Review',title:'Review Your Information',sub:'Check before saving.'}];
+let obStep=0,obAllergies=[],obMeds=[],obConditions=[];
+function obInit(){const grid=document.getElementById('obCondGrid');if(grid)grid.innerHTML=OB_CONDITIONS.map((c,i)=>`<div class="ob-cond-item" id="obcond-${i}" onclick="obToggleCond(${i},'${c.replace(/'/g,"\\'")}')"><div class="ob-cond-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div><span class="ob-cond-label">${c}</span></div>`).join('');const aq=document.getElementById('obAllergyQuick');if(aq)aq.innerHTML=OB_QUICK_ALLERGIES.map(a=>`<button onclick="obQuickAdd('allergy','${a}')" style="background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.3);border-radius:20px;padding:5px 11px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">${a}</button>`).join('');const mq=document.getElementById('obMedQuick');if(mq)mq.innerHTML=OB_QUICK_MEDS.map(m=>`<button onclick="obQuickAdd('med','${m}')" style="background:var(--blue-bg);color:var(--accent);border:1px solid rgba(79,156,249,.3);border-radius:20px;padding:5px 11px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">${m}</button>`).join('');obRenderDots();obUpdateHeader();}
+function obToggleCond(i,name){const el=document.getElementById('obcond-'+i);if(!el)return;const idx=obConditions.indexOf(name);if(idx>-1){obConditions.splice(idx,1);el.classList.remove('checked')}else{obConditions.push(name);el.classList.add('checked')}}
+function obQuickAdd(type,val){if(type==='allergy')obAddAllergyVal(val);else obAddMedVal(val)}
+function obAddAllergy(){obAddAllergyVal(document.getElementById('ob-allergy-input').value.trim());document.getElementById('ob-allergy-input').value=''}
+function obAddAllergyVal(val){if(!val||obAllergies.includes(val))return;obAllergies.push(val);obRenderAllergyChips()}
+function obRemoveAllergy(i){obAllergies.splice(i,1);obRenderAllergyChips()}
+function obRenderAllergyChips(){const wrap=document.getElementById('obAllergyChips');if(!wrap)return;wrap.innerHTML=obAllergies.map((a,i)=>`<span class="ob-chip-allergy">${a}<button class="ob-chip-btn" onclick="obRemoveAllergy(${i})">×</button></span>`).join('')}
+function obAddMed(){obAddMedVal(document.getElementById('ob-med-input').value.trim());document.getElementById('ob-med-input').value=''}
+function obAddMedVal(val){if(!val||obMeds.includes(val))return;obMeds.push(val);obRenderMedChips()}
+function obRemoveMed(i){obMeds.splice(i,1);obRenderMedChips()}
+function obRenderMedChips(){const wrap=document.getElementById('obMedChips');if(!wrap)return;wrap.innerHTML=obMeds.map((m,i)=>`<span class="ob-chip-med">${m}<button class="ob-chip-btn" onclick="obRemoveMed(${i})">×</button></span>`).join('')}
+function obRenderDots(){const wrap=document.getElementById('obDots');if(!wrap)return;wrap.innerHTML=OB_STEP_META.map((_,i)=>`<div class="ob-dot${i<obStep?' done':i===obStep?' active':''}"></div>`).join('')}
+function obUpdateHeader(){const m=OB_STEP_META[obStep];document.getElementById('obStepLabel').textContent='Step '+(obStep+1)+' of '+OB_TOTAL_STEPS;document.getElementById('obTitle').textContent=m.title;document.getElementById('obSub').textContent=m.sub;document.getElementById('obBackBtn').style.display=obStep===0?'none':'flex';document.getElementById('obSkipBtn').style.display=obStep===0?'block':'none';const nextBtn=document.getElementById('obNextBtn');if(obStep===OB_TOTAL_STEPS-1){nextBtn.textContent='✓  Save Profile';nextBtn.className='ob-btn ob-btn-finish';obBuildSummary()}else if(obStep===0){nextBtn.textContent='Get Started →';nextBtn.className='ob-btn ob-btn-next'}else{nextBtn.textContent='Continue →';nextBtn.className='ob-btn ob-btn-next'}}
+function obBuildSummary(){const el=document.getElementById('obSummary');if(!el)return;const name=document.getElementById('ob-name')?.value.trim()||'—',age=document.getElementById('ob-age')?.value.trim()||'—',sex=document.getElementById('ob-sex')?.value||'—';el.innerHTML=`<div style="padding:9px 0;border-bottom:1px solid var(--border)"><div style="font-size:10px;color:var(--text3)">PATIENT</div><div style="font-size:13px;color:var(--text);margin-top:3px">${name} · Age ${age} · ${sex}</div></div><div style="padding:9px 0;border-bottom:1px solid var(--border)"><div style="font-size:10px;color:var(--text3)">CONDITIONS</div><div style="font-size:12px;color:var(--text);margin-top:3px">${obConditions.length?obConditions.join(', '):'None'}</div></div><div style="padding:9px 0;border-bottom:1px solid var(--border)"><div style="font-size:10px;color:var(--text3)">ALLERGIES</div><div style="font-size:12px;color:var(--text);margin-top:3px">${obAllergies.length?obAllergies.join(', '):'None'}</div></div><div style="padding:9px 0"><div style="font-size:10px;color:var(--text3)">MEDICATIONS</div><div style="font-size:12px;color:var(--text);margin-top:3px">${obMeds.length?obMeds.join(', '):'None'}</div></div>`;}
+function obNext(){if(obStep===1&&!document.getElementById('ob-name')?.value.trim()){showToast('Patient name is required','warning');return}if(obStep<OB_TOTAL_STEPS-1){document.getElementById('ob-step-'+obStep).classList.remove('active');obStep++;document.getElementById('ob-step-'+obStep).classList.add('active');obRenderDots();obUpdateHeader();document.querySelector('.ob-body').scrollTop=0}else{obFinish()}}
+function obBack(){if(obStep>0){document.getElementById('ob-step-'+obStep).classList.remove('active');obStep--;document.getElementById('ob-step-'+obStep).classList.add('active');obRenderDots();obUpdateHeader();document.querySelector('.ob-body').scrollTop=0}}
+function obSkip(){if(!confirm('Skip patient setup? You can fill this in later from the Patient tab.'))return;store('profileComplete',true);obClose()}
+function obFinish(){const nameVal=document.getElementById('ob-name')?.value.trim();if(!nameVal){showToast('Patient name required','warning');return}profile.name=nameVal;profile.age=document.getElementById('ob-age')?.value.trim()||'';profile.sex=document.getElementById('ob-sex')?.value||'';profile.blood=document.getElementById('ob-blood')?.value||'';profile.weight=document.getElementById('ob-weight')?.value.trim()||'';profile.conditions=obConditions.join(', ');profile.allergies=[...obAllergies];profile.medications=[...obMeds];profile.emergName=document.getElementById('ob-emerg-name')?.value.trim()||'';profile.emergPhone=document.getElementById('ob-emerg-phone')?.value.trim()||'';profile.emergRel=document.getElementById('ob-emerg-rel')?.value.trim()||'';store('patientProfile',profile);store('profileComplete',true);loadProfileForm();renderProfileHero();obClose();showToast('Profile saved — welcome, '+profile.name+'!','success');}
+function obClose(){const ov=document.getElementById('onboardOverlay');ov.style.opacity='0';ov.style.transition='opacity .3s ease';setTimeout(()=>{ov.style.display='none';ov.classList.remove('show');ov.style.opacity='';ov.style.transition=''},320)}
+function maybeShowOnboarding(){if(!load('profileComplete',false)){obInit();document.getElementById('onboardOverlay').classList.add('show')}}
+
+/* ════════ SPLASH ════════ */
+const splashLabels=['Initializing BLE stack...','Loading ML drug model...','Connecting to Pi...','Restoring session data...','Ready'];
+const splashEl=document.getElementById('splashLabel');let splashIdx=0;
+const splashIntv=setInterval(()=>{splashIdx++;if(splashIdx<splashLabels.length)splashEl.textContent=splashLabels[splashIdx]},400);
+const bgEl=document.getElementById('splashBg');const pillColors=['#4f9cf9','#22c55e','#f59e0b','#ef4444','#a78bfa'];
+for(let i=0;i<18;i++){const pill=document.createElement('div');pill.className='bg-pill';const w=20+Math.random()*40,h=w*.4+4;pill.style.cssText=`width:${w}px;height:${h}px;left:${Math.random()*90}%;top:${Math.random()*90}%;background:${pillColors[i%5]};animation-delay:${Math.random()*1.5}s;animation-duration:${2+Math.random()*2}s;transform:rotate(${Math.random()*180}deg);border-radius:${h/2}px`;bgEl.appendChild(pill)}
+setTimeout(()=>{clearInterval(splashIntv);const splash=document.getElementById('splash');splash.style.animation='splashExit .5s cubic-bezier(.4,0,1,1) forwards';setTimeout(()=>splash.style.display='none',500);if(pinEnabled)setTimeout(showPinScreen,100);else setTimeout(maybeShowOnboarding,600);},2200);
+
+/* ════════ BOOT / RESTORE ════════ */
+window.addEventListener('load',()=>{
+  if(load('theme','dark')==='light'){isLight=true;document.getElementById('appShell').classList.add('light');document.body.classList.add('light');document.getElementById('themeLabel').textContent='Light Mode active'}
+  pinEnabled=load('pinEnabled',false);pinCode=load('pinCode','1234');
+  if(pinEnabled)document.getElementById('pinLockSub').textContent='Enabled · ****';
+  renderReminders();renderHistory();renderDosageTracker();updateDashboardStats();updateHistCountLabel();syncPickerUI();
+  setInterval(updateTickerText,60000);
+  CONFIDENCE_THRESHOLD=parseInt(load('confThreshold',70));
+  dupFilter=load('dupFilter',true);unknownAlert=load('unknownAlert',true);
+  alertTypeIdx=parseInt(load('alertTypeIdx',0));
+  piVolume=parseInt(load('piVolume',80));
+  voiceEnabled=load('voiceEnabled',true);
+  voiceRate=parseFloat(load('voiceRate',1.0));
+  piSpeakEnabled=load('piSpeakEnabled',true);
+  const setT=(id,val)=>{const el=document.getElementById(id);if(el)el.className='toggle '+(val?'on':'off')};
+  setT('speakerToggle',load('piSpeaker',true));setT('dupFilterToggle',dupFilter);setT('unknownAlertToggle',unknownAlert);setT('voiceToggle',voiceEnabled);setT('piSpeakToggle',piSpeakEnabled);
+  const ts=document.getElementById('threshSlider'),tv=document.getElementById('threshVal');if(ts)ts.value=CONFIDENCE_THRESHOLD;if(tv)tv.textContent=CONFIDENCE_THRESHOLD+'%';
+  const atl=document.getElementById('alertTypeLabel'),ats=document.getElementById('alertTypeSub');if(atl)atl.textContent=ALERT_TYPES[alertTypeIdx];if(ats)ats.textContent='Alert type: '+ALERT_TYPES[alertTypeIdx];
+  const pvs=document.getElementById('piVolSlider'),pvl=document.getElementById('piVolLabel');if(pvs)pvs.value=piVolume;if(pvl)pvl.textContent=piVolume+'%';
+  const vrs=document.getElementById('voiceRateSlider'),vrl=document.getElementById('voiceRateLabel');if(vrs)vrs.value=voiceRate;if(vrl)vrl.textContent=voiceRate.toFixed(1)+'×';
+  updateVolBars(piVolume);
+  if(window.speechSynthesis){window.speechSynthesis.getVoices();window.speechSynthesis.onvoiceschanged=()=>window.speechSynthesis.getVoices()}
+  const savedFs=parseInt(load('fontSize',100))||100;applyFontSize(savedFs,true);
+  loadProfileForm();
+});
+</script>
+</body>
+</html>
